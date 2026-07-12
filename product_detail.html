@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bringo - Product Details</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-white select-none pb-24">
+    <!-- Transparent/Floating Header -->
+    <div class="fixed top-0 w-full p-4 flex justify-between z-40">
+        <a href="javascript:history.back()" class="w-10 h-10 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow text-gray-800"><i class="fa-solid fa-arrow-left"></i></a>
+        <a href="cart.html" class="w-10 h-10 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow text-orange-500 relative">
+            <i class="fa-solid fa-cart-shopping"></i>
+        </a>
+    </div>
+
+    <!-- Product Image -->
+    <div class="w-full h-80 bg-gray-50 flex items-center justify-center p-8 relative">
+        <img id="pd-image" src="https://via.placeholder.com/300" class="w-full h-full object-contain drop-shadow-lg">
+    </div>
+
+    <div class="p-5 rounded-t-3xl -mt-6 bg-white relative z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+        <div class="flex justify-between items-start mb-2">
+            <h1 id="pd-name" class="text-2xl font-bold text-gray-800 leading-tight">Loading...</h1>
+        </div>
+        <p id="pd-price" class="text-2xl font-black text-orange-600 mb-3">₹---</p>
+        
+        <div class="flex gap-2 mb-4">
+            <span id="pd-stock" class="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full"><i class="fa-solid fa-check mr-1"></i> In Stock</span>
+            <span id="pd-type" class="bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full">...</span>
+        </div>
+
+        <h3 class="font-bold text-gray-800 mb-1 text-sm uppercase">Description</h3>
+        <p id="pd-desc" class="text-gray-500 text-sm leading-relaxed mb-6">
+            ...
+        </p>
+    </div>
+
+    <!-- Fixed Bottom Actions -->
+    <div class="fixed bottom-0 w-full bg-white border-t p-4 flex gap-3 z-50">
+        <div class="flex items-center justify-between bg-gray-100 rounded-xl px-4 py-3 w-1/3">
+            <button class="text-gray-500 hover:text-orange-500"><i class="fa-solid fa-minus"></i></button>
+            <span class="font-bold text-gray-800">1</span>
+            <button class="text-gray-500 hover:text-orange-500"><i class="fa-solid fa-plus"></i></button>
+        </div>
+        <button class="flex-1 bg-orange-500 text-white font-bold rounded-xl shadow-lg hover:bg-orange-600 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-bag-shopping"></i> Add to Cart
+        </button>
+    </div>
+
+    <script type="module">
+        import { db, doc, getDoc } from './common/firebase-config.js';
+        import './common/security.js';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const prodId = urlParams.get('id');
+
+        async function loadProductDetails() {
+            if(!prodId) return window.location.href = 'index.html';
+            
+            const docSnap = await getDoc(doc(db, "products", prodId));
+            if(docSnap.exists()) {
+                const data = docSnap.data();
+                document.getElementById('pd-image').src = data.image_url;
+                document.getElementById('pd-name').innerText = data.name;
+                document.getElementById('pd-price').innerText = `₹${data.price}`;
+                document.getElementById('pd-desc').innerText = data.description;
+                document.getElementById('pd-type').innerText = data.payment_type === 'Prepaid' ? 'Prepaid Only (QR Scan)' : 'COD Available';
+                
+                if(data.stock <= 0) {
+                    const stockBadge = document.getElementById('pd-stock');
+                    stockBadge.className = "bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full";
+                    stockBadge.innerHTML = '<i class="fa-solid fa-xmark mr-1"></i> Out of Stock';
+                }
+            } else {
+                alert('Product not found');
+            }
+        }
+        loadProductDetails();
+    </script>
+</body>
+</html>
