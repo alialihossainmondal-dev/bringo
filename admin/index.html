@@ -19,21 +19,21 @@
         <div class="grid grid-cols-2 gap-4 mb-6">
             <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-400">
                 <p class="text-xs text-gray-500 font-bold uppercase">Total Revenue</p>
-                <h3 class="text-xl font-bold text-orange-600 mt-1">₹45,200</h3>
+                <h3 id="total-revenue" class="text-xl font-bold text-orange-600 mt-1"><i class="fa-solid fa-spinner fa-spin text-sm"></i></h3>
             </div>
             <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-orange-500">
                 <p class="text-xs text-gray-500 font-bold uppercase">Orders</p>
-                <h3 class="text-xl font-bold text-gray-800 mt-1">128</h3>
+                <h3 id="total-orders" class="text-xl font-bold text-gray-800 mt-1"><i class="fa-solid fa-spinner fa-spin text-sm"></i></h3>
             </div>
         </div>
 
         <!-- Alerts Section -->
-        <div class="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded-lg mb-6 shadow-sm">
+        <div id="alert-section" class="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded-lg mb-6 shadow-sm hidden">
             <div class="flex items-center">
-                <i class="fa-solid fa-bell text-yellow-600 text-xl mr-3"></i>
+                <i class="fa-solid fa-bell text-yellow-600 text-xl mr-3 animate-pulse"></i>
                 <div>
                     <h4 class="text-sm font-bold text-yellow-800">Pending Approvals</h4>
-                    <p class="text-xs text-yellow-700">3 Prepaid orders await Transaction ID verification.</p>
+                    <p id="alert-text" class="text-xs text-yellow-700">0 Prepaid orders await Transaction ID verification.</p>
                 </div>
             </div>
         </div>
@@ -41,25 +41,77 @@
         <!-- Quick Actions -->
         <h2 class="font-bold text-gray-700 mb-3 uppercase text-sm">Management</h2>
         <div class="grid grid-cols-3 gap-3 text-center">
-            <a href="product.html" class="bg-white p-4 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50">
+            <a href="product.html" class="bg-white p-4 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50 transition">
                 <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mb-2">
                     <i class="fa-solid fa-box text-orange-500"></i>
                 </div>
                 <span class="text-xs font-bold text-gray-600">Products</span>
             </a>
-            <a href="category.html" class="bg-white p-4 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50">
+            <a href="category.html" class="bg-white p-4 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50 transition">
                 <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mb-2">
                     <i class="fa-solid fa-list text-orange-500"></i>
                 </div>
                 <span class="text-xs font-bold text-gray-600">Categories</span>
             </a>
-            <a href="order.html" class="bg-white p-4 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50">
+            <a href="order.html" class="bg-white p-4 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50 transition">
                 <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mb-2">
                     <i class="fa-solid fa-truck text-orange-500"></i>
                 </div>
                 <span class="text-xs font-bold text-gray-600">Orders</span>
             </a>
+            <a href="user.html" class="bg-white p-4 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50 transition col-span-3 mt-2">
+                <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mb-2">
+                    <i class="fa-solid fa-users text-orange-500"></i>
+                </div>
+                <span class="text-xs font-bold text-gray-600">Registered Users</span>
+            </a>
         </div>
     </div>
+
+    <script type="module">
+        import { db, collection, getDocs } from '../common/firebase-config.js';
+
+        async function fetchDashboardStats() {
+            try {
+                const querySnapshot = await getDocs(collection(db, "orders"));
+                
+                let totalRevenue = 0;
+                let totalOrders = 0;
+                let pendingPrepaid = 0;
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    totalOrders++;
+                    
+                    // Cancelled অর্ডার বাদে বাকি সব অর্ডারের টাকা যোগ হবে
+                    if(data.status !== 'Cancelled') {
+                        totalRevenue += Number(data.total_amount || 0);
+                    }
+
+                    // পেমেন্ট পেন্ডিং আছে এমন প্রি-পেইড অর্ডারের হিসেব
+                    if(data.payment_method === 'prepaid' && data.status === 'Placed') {
+                        pendingPrepaid++;
+                    }
+                });
+
+                // আপডেট UI
+                document.getElementById('total-revenue').innerText = `₹${totalRevenue}`;
+                document.getElementById('total-orders').innerText = totalOrders;
+
+                // অ্যালার্ট শো করানো (যদি পেন্ডিং অর্ডার থাকে)
+                if(pendingPrepaid > 0) {
+                    document.getElementById('alert-section').classList.remove('hidden');
+                    document.getElementById('alert-text').innerText = `${pendingPrepaid} Prepaid order(s) await Transaction ID verification.`;
+                }
+
+            } catch (error) {
+                console.error("Error fetching stats: ", error);
+                document.getElementById('total-revenue').innerText = "Error";
+                document.getElementById('total-orders').innerText = "Error";
+            }
+        }
+
+        fetchDashboardStats();
+    </script>
 </body>
 </html>
