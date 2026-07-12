@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bringo - Home</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Hide scrollbar for category scroll */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-gray-50 select-none pb-20">
+    <!-- Header -->
+    <div class="bg-orange-500 text-white p-4 sticky top-0 z-40 rounded-b-2xl shadow-md">
+        <div class="flex justify-between items-center mb-3">
+            <h1 class="text-2xl font-bold"><i class="fa-solid fa-bag-shopping text-yellow-300 mr-2"></i>Bringo</h1>
+            <a href="profile.html"><img src="https://via.placeholder.com/40" id="user-pfp" class="w-9 h-9 rounded-full border-2 border-yellow-300"></a>
+        </div>
+        <div class="relative">
+            <input type="text" placeholder="Search for groceries, electronics..." class="w-full py-2 pl-10 pr-4 rounded-xl text-gray-800 text-sm focus:outline-none">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400"></i>
+        </div>
+    </div>
+
+    <div class="p-4">
+        <!-- Categories -->
+        <h2 class="font-bold text-gray-800 mb-3 uppercase text-sm tracking-wide">Categories</h2>
+        <div class="flex overflow-x-auto gap-4 no-scrollbar mb-6 pb-2" id="category-list">
+            <div class="text-center min-w-[70px] animate-pulse">
+                <div class="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-1"></div>
+            </div>
+            <!-- Populated via JS -->
+        </div>
+
+        <!-- Featured Products -->
+        <div class="flex justify-between items-center mb-3">
+            <h2 class="font-bold text-gray-800 uppercase text-sm tracking-wide">Featured Items</h2>
+            <a href="product.html" class="text-xs text-orange-500 font-bold">See All</a>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3" id="product-list">
+            <!-- Loader -->
+            <div class="bg-white rounded-xl shadow-sm p-3 animate-pulse h-48"></div>
+            <div class="bg-white rounded-xl shadow-sm p-3 animate-pulse h-48"></div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="fixed bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center h-16 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <a href="index.html" class="flex flex-col items-center text-orange-500"><i class="fa-solid fa-house text-xl"></i></a>
+        <a href="cart.html" class="flex flex-col items-center text-gray-400 hover:text-orange-500 relative">
+            <i class="fa-solid fa-cart-shopping text-xl"></i>
+            <span id="cart-badge" class="absolute -top-1 -right-2 bg-yellow-400 text-gray-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full hidden">0</span>
+        </a>
+        <a href="order.html" class="flex flex-col items-center text-gray-400 hover:text-orange-500"><i class="fa-solid fa-box-open text-xl"></i></a>
+        <a href="profile.html" class="flex flex-col items-center text-gray-400 hover:text-orange-500"><i class="fa-solid fa-user text-xl"></i></a>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, auth, onAuthStateChanged } from './common/firebase-config.js';
+        import './common/security.js';
+
+        // Load Auth State
+        onAuthStateChanged(auth, (user) => {
+            if (!user) window.location.href = 'login.html';
+            else if(user.photoURL) document.getElementById('user-pfp').src = user.photoURL;
+        });
+
+        // Fetch Categories
+        async function loadCategories() {
+            const list = document.getElementById('category-list');
+            const querySnapshot = await getDocs(collection(db, "categories"));
+            list.innerHTML = '';
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                list.innerHTML += `
+                    <div class="text-center min-w-[70px] cursor-pointer hover:opacity-80">
+                        <img src="${data.image_url}" class="w-16 h-16 rounded-full mx-auto mb-1 border-2 border-orange-100 object-cover shadow-sm">
+                        <p class="text-xs text-gray-700 font-medium">${data.name}</p>
+                    </div>`;
+            });
+        }
+
+        // Fetch Products
+        async function loadProducts() {
+            const list = document.getElementById('product-list');
+            const querySnapshot = await getDocs(collection(db, "products"));
+            list.innerHTML = '';
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                const badge = data.payment_type === 'Prepaid' ? '<span class="absolute top-2 left-2 bg-yellow-400 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-md">Prepaid Only</span>' : '';
+                
+                list.innerHTML += `
+                    <div class="bg-white rounded-xl shadow-sm p-3 relative flex flex-col justify-between">
+                        ${badge}
+                        <img src="${data.image_url}" class="w-full h-24 object-contain mb-2 rounded">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-800 leading-tight truncate">${data.name}</h3>
+                            <p class="text-orange-600 font-bold text-sm mt-1">₹${data.price}</p>
+                        </div>
+                        <button onclick="addToCart('${doc.id}')" class="mt-2 w-full bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white transition rounded-lg py-1.5 text-sm font-bold flex justify-center items-center gap-2">
+                            <i class="fa-solid fa-plus"></i> Add
+                        </button>
+                    </div>`;
+            });
+        }
+
+        window.addToCart = (id) => {
+            alert('Added to cart! (Implement localstorage logic here)');
+            document.getElementById('cart-badge').classList.remove('hidden');
+            document.getElementById('cart-badge').innerText = '1';
+        };
+
+        loadCategories();
+        loadProducts();
+    </script>
+</body>
+</html>
