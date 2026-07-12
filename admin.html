@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bringo - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#800080',
+                        brandLight: '#a32cc4',
+                        adminDark: '#1e1e2d',
+                        adminLight: '#2b2b40'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 font-sans antialiased h-screen overflow-hidden flex">
+
+    <!-- Hardcoded Security Overlay -->
+    <div id="admin-login-overlay" class="fixed inset-0 bg-adminDark z-50 flex justify-center items-center p-4 transition-opacity duration-500">
+        <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-sm text-center">
+            <h2 class="text-3xl font-bold text-brand mb-2">bringo admin</h2>
+            <p class="text-gray-500 mb-6 text-sm">Secure Access Only</p>
+            <input type="text" id="admin-user" placeholder="Username" class="w-full border p-3 rounded-lg mb-4 focus:outline-none focus:border-brand">
+            <input type="password" id="admin-pass" placeholder="Password" class="w-full border p-3 rounded-lg mb-6 focus:outline-none focus:border-brand">
+            <button onclick="attemptLogin()" class="w-full bg-brand text-white font-bold py-3 rounded-lg hover:bg-brandLight transition">Login to Panel</button>
+            <p id="login-error" class="text-red-500 text-sm mt-3 hidden">Invalid credentials.</p>
+        </div>
+    </div>
+
+    <!-- Sidebar (SPA Navigation) -->
+    <aside class="w-64 bg-adminDark text-gray-300 flex flex-col h-full flex-shrink-0">
+        <div class="p-6 border-b border-adminLight text-center">
+            <h1 class="text-2xl font-bold text-white"><span class="text-brandLight">bringo</span> Admin</h1>
+        </div>
+        <nav class="flex-grow p-4 space-y-2">
+            <button onclick="switchAdminView('dashboard-view', this)" class="admin-tab w-full flex items-center p-3 rounded-lg bg-brand text-white transition">
+                <i class="fa-solid fa-chart-pie w-6"></i> Dashboard
+            </button>
+            <button onclick="switchAdminView('upload-view', this)" class="admin-tab w-full flex items-center p-3 rounded-lg hover:bg-adminLight transition">
+                <i class="fa-solid fa-cloud-arrow-up w-6"></i> Upload Data
+            </button>
+            <button onclick="switchAdminView('orders-view', this)" class="admin-tab w-full flex items-center p-3 rounded-lg hover:bg-adminLight transition">
+                <i class="fa-solid fa-box-open w-6"></i> Orders
+            </button>
+        </nav>
+        <div class="p-4 border-t border-adminLight">
+            <button onclick="location.reload()" class="w-full flex items-center p-3 text-red-400 hover:text-red-300 transition">
+                <i class="fa-solid fa-power-off w-6"></i> Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow h-full overflow-y-auto p-8 relative">
+        
+        <!-- DASHBOARD VIEW -->
+        <div id="dashboard-view" class="admin-view block">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Overview</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-brand">
+                    <p class="text-gray-500 text-sm font-semibold uppercase">Total Sales</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-2">₹1,24,500</h3>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
+                    <p class="text-gray-500 text-sm font-semibold uppercase">Pending Orders</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-2">14</h3>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
+                    <p class="text-gray-500 text-sm font-semibold uppercase">Total Products</p>
+                    <h3 class="text-3xl font-bold text-gray-800 mt-2">128</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- UPLOAD DATA VIEW -->
+        <div id="upload-view" class="admin-view hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Add New Product / Banner</h2>
+            <div class="bg-white p-6 rounded-xl shadow-sm max-w-3xl">
+                <form class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                            <input type="text" class="w-full border p-3 rounded-lg focus:outline-none focus:border-brand" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                            <select class="w-full border p-3 rounded-lg focus:outline-none focus:border-brand">
+                                <option>Electronics</option>
+                                <option>Fashion</option>
+                                <option>Home & Living</option>
+                                <option>Banner Image</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Product Description</label>
+                        <textarea rows="4" class="w-full border p-3 rounded-lg focus:outline-none focus:border-brand" required></textarea>
+                    </div>
+
+                    <!-- Direct File Upload UI -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Upload Product Image</label>
+                        <label class="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i class="fa-solid fa-cloud-arrow-up text-4xl text-gray-400 mb-3"></i>
+                                <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                                <p class="text-xs text-gray-500">PNG, JPG or WEBP (MAX. 2MB)</p>
+                            </div>
+                            <input type="file" accept="image/*" class="hidden" required />
+                        </label>
+                    </div>
+
+                    <button type="submit" class="bg-brand text-white font-bold py-3 px-8 rounded-lg hover:bg-brandLight transition">Upload to Firebase</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ORDERS VIEW -->
+        <div id="orders-view" class="admin-view hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Order Management</h2>
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 border-b text-gray-600 text-sm uppercase">
+                                <th class="p-4 font-semibold">Order ID</th>
+                                <th class="p-4 font-semibold">Customer Info</th>
+                                <th class="p-4 font-semibold">Txn ID (Payment)</th>
+                                <th class="p-4 font-semibold">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr class="border-b hover:bg-gray-50 transition">
+                                <td class="p-4 font-mono font-bold text-gray-800">#BR-8839</td>
+                                <td class="p-4">
+                                    <p class="font-bold">Rahul Sharma</p>
+                                    <p class="text-gray-500 text-xs">+91 9876543210</p>
+                                    <p class="text-gray-500 text-xs">Sector V, Salt Lake, Kolkata - 700091</p>
+                                </td>
+                                <td class="p-4 font-mono text-xs text-brand">TXN9928374610</td>
+                                <td class="p-4">
+                                    <select class="border border-gray-300 p-2 rounded text-sm focus:outline-none focus:border-brand bg-white">
+                                        <option value="placed" selected>Order Placed</option>
+                                        <option value="confirmed">Confirmed</option>
+                                        <option value="shipped">Shipped</option>
+                                        <option value="delivered">Delivered</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- UI JS Logic -->
+    <script>
+        // Secure Login Logic
+        function attemptLogin() {
+            const user = document.getElementById('admin-user').value;
+            const pass = document.getElementById('admin-pass').value;
+            if(user === 'ali0000' && pass === 'Ali2005#') {
+                const overlay = document.getElementById('admin-login-overlay');
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.classList.add('hidden'), 500);
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        }
+
+        // SPA Sidebar Navigation Logic
+        function switchAdminView(viewId, btnElement) {
+            document.querySelectorAll('.admin-view').forEach(view => {
+                view.classList.remove('block');
+                view.classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+            document.getElementById(viewId).classList.add('block');
+
+            document.querySelectorAll('.admin-tab').forEach(tab => {
+                tab.classList.remove('bg-brand', 'text-white');
+                tab.classList.add('hover:bg-adminLight');
+            });
+            btnElement.classList.add('bg-brand', 'text-white');
+            btnElement.classList.remove('hover:bg-adminLight');
+        }
+    </script>
+
+    <!-- Firebase SDK Setup -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getStorage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD_2WsbDLmbWlRd6H6Wu1v6tE3ZQw2aTDE",
+            authDomain: "bringo-f6d36.firebaseapp.com",
+            projectId: "bringo-f6d36",
+            storageBucket: "bringo-f6d36.firebasestorage.app",
+            messagingSenderId: "1020896490319",
+            appId: "1:1020896490319:web:acb75804261445df294b3a",
+            measurementId: "G-8R0RNDBQQF"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.auth = getAuth(app);
+        window.db = getFirestore(app);
+        window.storage = getStorage(app);
+        
+        console.log("Firebase connected successfully on Admin Panel!");
+    </script>
+</body>
+</html>
