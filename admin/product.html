@@ -14,24 +14,33 @@
     </div>
 
     <div class="p-4">
+        <!-- Add Product Form -->
         <div class="bg-white p-4 rounded-xl shadow-sm mb-6">
             <h2 class="font-bold text-gray-800 mb-3 uppercase text-sm"><i class="fa-solid fa-plus text-orange-500 mr-1"></i> Add Product</h2>
             
             <input type="text" id="p-name" placeholder="Product Name" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500 mb-3">
             
+            <!-- NEW: Category Dropdown -->
+            <select id="p-category" class="w-full border rounded-lg p-2 text-sm text-gray-700 bg-gray-50 mb-3 focus:outline-none focus:border-orange-500 font-bold">
+                <option value="">Select Category...</option>
+                <!-- Categories will load here dynamically -->
+            </select>
+
             <div class="grid grid-cols-2 gap-3 mb-3">
                 <input type="number" id="p-price" placeholder="Price (₹)" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500">
                 <input type="number" id="p-stock" placeholder="Stock Qty" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500">
             </div>
 
-            <select id="p-pay-type" class="w-full border rounded-lg p-2 text-sm text-gray-700 bg-white mb-3">
+            <select id="p-pay-type" class="w-full border rounded-lg p-2 text-sm text-gray-700 bg-white mb-3 focus:outline-none focus:border-orange-500">
                 <option value="Both">Payment: Both (COD & Prepaid)</option>
                 <option value="Prepaid">Prepaid Only (Requires QR scan)</option>
                 <option value="COD">COD Only</option>
             </select>
 
             <textarea id="p-desc" placeholder="Product Description" rows="2" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500 mb-3"></textarea>
+            
             <input type="file" id="p-image" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 mb-3">
+            
             <button id="add-btn" class="w-full bg-orange-500 text-white font-bold py-2 rounded-lg text-sm shadow hover:bg-orange-600">Save Product</button>
         </div>
 
@@ -45,6 +54,17 @@
         // আপনার ImgBB API Key এখানে দিন
         const IMGBB_API_KEY = "84d1381ec359c2c06ec716c61534f33e";
 
+        // Load Categories into Dropdown
+        const loadCategories = async () => {
+            const catSelect = document.getElementById('p-category');
+            const querySnapshot = await getDocs(collection(db, "categories"));
+            querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                catSelect.innerHTML += `<option value="${data.name}">${data.name}</option>`;
+            });
+        };
+
+        // Load Products in List
         const loadProducts = async () => {
             const list = document.getElementById('product-list');
             list.innerHTML = '';
@@ -56,8 +76,9 @@
                 list.innerHTML += `
                     <div class="bg-white p-3 rounded-xl shadow-sm flex items-start gap-3 border-l-4 border-orange-500 relative">
                         <img src="${data.image_url}" class="w-16 h-16 rounded-lg object-cover bg-gray-50 border">
-                        <div class="flex-1">
-                            <h3 class="font-bold text-gray-800 text-sm leading-tight">${data.name}</h3>
+                        <div class="flex-1 overflow-hidden">
+                            <span class="text-[10px] font-bold text-orange-500 uppercase tracking-wider">${data.category || 'Uncategorized'}</span>
+                            <h3 class="font-bold text-gray-800 text-sm leading-tight truncate">${data.name}</h3>
                             <p class="text-orange-600 font-bold text-sm">₹${data.price} <span class="text-xs text-gray-400 font-normal ml-2">Stock: ${data.stock}</span></p>
                             <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${badgeColor}">${data.payment_type}</span>
                         </div>
@@ -66,8 +87,10 @@
             });
         };
 
+        // Save Product Logic
         document.getElementById('add-btn').addEventListener('click', async () => {
             const name = document.getElementById('p-name').value;
+            const category = document.getElementById('p-category').value;
             const price = document.getElementById('p-price').value;
             const stock = document.getElementById('p-stock').value;
             const type = document.getElementById('p-pay-type').value;
@@ -75,7 +98,8 @@
             const file = document.getElementById('p-image').files[0];
             const btn = document.getElementById('add-btn');
             
-            if(!name || !price || !file) return alert("Required fields missing");
+            if(!name || !category || !price || !file) return alert("Please fill all required fields, including Category.");
+            
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
 
             try {
@@ -90,16 +114,20 @@
 
                 if(imgData.success) {
                     await addDoc(collection(db, "products"), { 
-                        name, price: Number(price), stock: Number(stock), 
+                        name, category, price: Number(price), stock: Number(stock), 
                         payment_type: type, description: desc, image_url: imgData.data.url, created_at: new Date()
                     });
                     
+                    // Reset fields
                     document.getElementById('p-name').value = '';
+                    document.getElementById('p-category').value = '';
                     document.getElementById('p-price').value = '';
                     document.getElementById('p-stock').value = '';
                     document.getElementById('p-desc').value = '';
                     document.getElementById('p-image').value = '';
+                    
                     loadProducts();
+                    alert("Product Saved Successfully!");
                 } else {
                     alert("Image upload failed!");
                 }
@@ -110,6 +138,7 @@
             }
         });
 
+        // Delete Product
         window.deleteProd = async (id) => {
             if(confirm('Delete product?')) {
                 await deleteDoc(doc(db, "products", id));
@@ -117,6 +146,8 @@
             }
         };
 
+        // Initial Load
+        loadCategories();
         loadProducts();
     </script>
 </body>
