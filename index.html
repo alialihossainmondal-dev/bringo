@@ -16,7 +16,6 @@
     <div class="bg-orange-500 text-white p-4 sticky top-0 z-40 rounded-b-2xl shadow-md">
         <div class="flex justify-between items-center mb-3">
             <h1 class="text-2xl font-bold"><i class="fa-solid fa-bag-shopping text-yellow-300 mr-2"></i>Bringo</h1>
-            <!-- Profile Icon Updated for Guest/User Logic -->
             <a href="login.html" id="user-pfp-link">
                 <img src="https://ui-avatars.com/api/?name=Login&background=f97316&color=fff" id="user-pfp" class="w-9 h-9 rounded-full border-2 border-yellow-300 shadow-sm">
             </a>
@@ -24,6 +23,16 @@
         <div class="relative">
             <input type="text" placeholder="Search for groceries, electronics..." class="w-full py-2 pl-10 pr-4 rounded-xl text-gray-800 text-sm focus:outline-none shadow-inner">
             <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400"></i>
+        </div>
+    </div>
+
+    <!-- NEW: Auto Image Slider (Banner) -->
+    <div class="p-4 pb-0">
+        <!-- Note: Change aspect-[16/9] to aspect-[9/16] if you want vertical tall banners -->
+        <div id="banner-slider" class="relative w-full aspect-[16/9] bg-gray-200 rounded-xl overflow-hidden shadow-sm">
+            <div class="absolute inset-0 flex items-center justify-center">
+                <i class="fa-solid fa-spinner fa-spin text-orange-500 text-2xl"></i>
+            </div>
         </div>
     </div>
 
@@ -63,22 +72,53 @@
         import { db, collection, getDocs, auth, onAuthStateChanged } from './common/firebase-config.js';
         import './common/security.js';
 
-        // NEW: Allow guest access, but update UI if logged in
         onAuthStateChanged(auth, (user) => {
             const pfpLink = document.getElementById('user-pfp-link');
             const pfpImg = document.getElementById('user-pfp');
-            
             if (user) {
                 pfpLink.href = 'profile.html';
                 if(user.photoURL) pfpImg.src = user.photoURL;
             }
         });
 
+        // Load Auto Slider Banners
+        async function loadBanners() {
+            const slider = document.getElementById('banner-slider');
+            const snap = await getDocs(collection(db, "banners"));
+            let bannersHTML = '';
+            let count = 0;
+            
+            snap.forEach(doc => {
+                let hiddenClass = count === 0 ? 'opacity-100' : 'opacity-0';
+                bannersHTML += `<img src="${doc.data().image_url}" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${hiddenClass} banner-slide">`;
+                count++;
+            });
+
+            if(count > 0) {
+                slider.innerHTML = bannersHTML;
+                let current = 0;
+                const slides = document.querySelectorAll('.banner-slide');
+                
+                // 3 সেকেন্ড পর পর স্লাইড পরিবর্তন
+                if(slides.length > 1) {
+                    setInterval(() => {
+                        slides[current].classList.remove('opacity-100');
+                        slides[current].classList.add('opacity-0');
+                        current = (current + 1) % slides.length;
+                        slides[current].classList.remove('opacity-0');
+                        slides[current].classList.add('opacity-100');
+                    }, 3000); 
+                }
+            } else {
+                slider.innerHTML = `<div class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm font-bold bg-gray-100">No Banners Added</div>`;
+            }
+        }
+
         async function loadCategories() {
             const list = document.getElementById('category-list');
-            const querySnapshot = await getDocs(collection(db, "categories"));
+            const snap = await getDocs(collection(db, "categories"));
             list.innerHTML = '';
-            querySnapshot.forEach((doc) => {
+            snap.forEach((doc) => {
                 const data = doc.data();
                 list.innerHTML += `
                     <div class="text-center min-w-[70px] cursor-pointer hover:opacity-80">
@@ -90,12 +130,11 @@
 
         async function loadProducts() {
             const list = document.getElementById('product-list');
-            const querySnapshot = await getDocs(collection(db, "products"));
+            const snap = await getDocs(collection(db, "products"));
             list.innerHTML = '';
-            querySnapshot.forEach((doc) => {
+            snap.forEach((doc) => {
                 const data = doc.data();
                 const badge = data.payment_type === 'Prepaid' ? '<span class="absolute top-2 left-2 bg-yellow-400 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-md">Prepaid Only</span>' : '';
-                
                 list.innerHTML += `
                     <a href="product_detail.html?id=${doc.id}" class="bg-white rounded-xl shadow-sm p-3 relative flex flex-col justify-between block hover:shadow-md transition">
                         ${badge}
@@ -112,12 +151,12 @@
         }
 
         window.addToCart = (id) => {
-            // Check if user is logged in before adding to cart (Optional, you can let them add to cart locally and force login at checkout)
             alert('Added to cart!');
             document.getElementById('cart-badge').classList.remove('hidden');
             document.getElementById('cart-badge').innerText = '1';
         };
 
+        loadBanners();
         loadCategories();
         loadProducts();
     </script>
