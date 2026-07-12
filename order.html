@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bringo - My Orders</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 select-none pb-20">
+    <div class="bg-orange-500 text-white p-4 sticky top-0 flex justify-between items-center shadow-md z-40">
+        <h1 class="text-xl font-bold">My Orders</h1>
+    </div>
+
+    <div class="p-4 space-y-4" id="orders-list">
+        <!-- Loader -->
+        <div class="text-center text-orange-500 mt-10"><i class="fa-solid fa-circle-notch fa-spin text-3xl"></i></div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="fixed bottom-0 w-full bg-white border-t flex justify-around items-center h-16 z-50">
+        <a href="index.html" class="text-gray-400 hover:text-orange-500"><i class="fa-solid fa-house text-xl"></i></a>
+        <a href="cart.html" class="text-gray-400 hover:text-orange-500"><i class="fa-solid fa-cart-shopping text-xl"></i></a>
+        <a href="order.html" class="text-orange-500"><i class="fa-solid fa-box-open text-xl"></i></a>
+        <a href="profile.html" class="text-gray-400 hover:text-orange-500"><i class="fa-solid fa-user text-xl"></i></a>
+    </div>
+
+    <script type="module">
+        import { auth, db, collection, query, where, getDocs, onAuthStateChanged } from './common/firebase-config.js';
+        import './common/security.js';
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) return window.location.href = 'login.html';
+            
+            const list = document.getElementById('orders-list');
+            const q = query(collection(db, "orders"), where("user_id", "==", user.uid));
+            const querySnapshot = await getDocs(q);
+            
+            list.innerHTML = '';
+            if(querySnapshot.empty) {
+                list.innerHTML = `<div class="text-center text-gray-400 mt-10"><i class="fa-solid fa-box-open text-4xl mb-2"></i><p>No orders found.</p></div>`;
+                return;
+            }
+
+            querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                const statusColor = data.status === 'Delivered' ? 'text-green-500' : 'text-orange-500';
+                const txInfo = data.payment_method === 'prepaid' ? `<p class="text-[10px] text-gray-500 mt-1">TXN: ${data.transaction_id}</p>` : '';
+                
+                list.innerHTML += `
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-400">
+                        <div class="flex justify-between items-center mb-2 border-b pb-2">
+                            <span class="text-xs font-bold text-gray-500">Order ID: #${docSnap.id.slice(-6).toUpperCase()}</span>
+                            <span class="text-xs font-bold ${statusColor} bg-orange-50 px-2 py-1 rounded">${data.status}</span>
+                        </div>
+                        <div class="flex justify-between items-end mt-2">
+                            <div>
+                                <p class="text-sm font-bold text-gray-800">Total: ₹${data.total_amount}</p>
+                                <p class="text-xs text-gray-500 uppercase mt-0.5"><i class="fa-solid fa-wallet text-orange-400"></i> ${data.payment_method}</p>
+                                ${txInfo}
+                            </div>
+                            <button class="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg font-bold hover:bg-orange-100">Details</button>
+                        </div>
+                    </div>`;
+            });
+        });
+    </script>
+</body>
+</html>
