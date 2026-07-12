@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Admin - Categories</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 select-none pb-20">
+    <div class="bg-orange-600 text-white p-4 sticky top-0 flex items-center shadow-md z-40">
+        <a href="index.html" class="mr-4"><i class="fa-solid fa-arrow-left text-xl"></i></a>
+        <h1 class="text-xl font-bold">Manage Categories</h1>
+    </div>
+
+    <div class="p-4">
+        <!-- Add Category Form -->
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-6">
+            <h2 class="font-bold text-gray-800 mb-3 uppercase text-sm"><i class="fa-solid fa-plus text-orange-500 mr-1"></i> Add New</h2>
+            <input type="text" id="cat-name" placeholder="Category Name" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500 mb-3">
+            <input type="file" id="cat-image" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 mb-3">
+            <button id="add-btn" class="w-full bg-orange-500 text-white font-bold py-2 rounded-lg text-sm shadow hover:bg-orange-600">Save Category</button>
+        </div>
+
+        <!-- List Categories -->
+        <h2 class="font-bold text-gray-800 mb-3 uppercase text-sm">Existing Categories</h2>
+        <div id="cat-list" class="space-y-3">
+            <div class="text-center text-sm text-gray-500"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, storage, collection, addDoc, getDocs, doc, deleteDoc, ref, uploadBytes, getDownloadURL } from '../common/firebase-config.js';
+
+        const loadCategories = async () => {
+            const list = document.getElementById('cat-list');
+            list.innerHTML = '';
+            const querySnapshot = await getDocs(collection(db, "categories"));
+            querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                list.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl shadow-sm flex items-center justify-between border-l-4 border-yellow-400">
+                        <div class="flex items-center gap-3">
+                            <img src="${data.image_url}" class="w-12 h-12 rounded-lg object-cover bg-gray-100">
+                            <span class="font-bold text-gray-700">${data.name}</span>
+                        </div>
+                        <button onclick="deleteCat('${docSnap.id}')" class="text-red-400 hover:text-red-600 p-2 bg-red-50 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+                    </div>`;
+            });
+        };
+
+        document.getElementById('add-btn').addEventListener('click', async () => {
+            const name = document.getElementById('cat-name').value;
+            const file = document.getElementById('cat-image').files[0];
+            const btn = document.getElementById('add-btn');
+            
+            if(!name || !file) return alert("Fill all fields");
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+            try {
+                const storageRef = ref(storage, 'categories/' + file.name + Date.now());
+                await uploadBytes(storageRef, file);
+                const url = await getDownloadURL(storageRef);
+
+                await addDoc(collection(db, "categories"), { name, image_url: url });
+                
+                document.getElementById('cat-name').value = '';
+                document.getElementById('cat-image').value = '';
+                loadCategories();
+            } catch (error) {
+                alert("Error: " + error.message);
+            } finally {
+                btn.innerHTML = 'Save Category';
+            }
+        });
+
+        window.deleteCat = async (id) => {
+            if(confirm('Delete this category?')) {
+                await deleteDoc(doc(db, "categories", id));
+                loadCategories();
+            }
+        };
+
+        loadCategories();
+    </script>
+</body>
+</html>
