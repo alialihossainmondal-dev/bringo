@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bringo - Profile</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-50 select-none pb-20">
+    <div class="bg-orange-500 text-white p-6 rounded-b-3xl shadow-md text-center relative z-40">
+        <h1 class="text-xl font-bold mb-4">My Profile</h1>
+        <div class="relative inline-block">
+            <img id="user-pfp" src="https://via.placeholder.com/100" class="w-24 h-24 rounded-full border-4 border-yellow-300 object-cover mx-auto bg-white">
+            <div class="absolute bottom-0 right-0 bg-yellow-400 p-1.5 rounded-full text-orange-900 shadow">
+                <i class="fa-solid fa-camera text-xs"></i>
+            </div>
+        </div>
+        <h2 id="user-name" class="text-lg font-bold mt-2">Loading...</h2>
+        <p id="user-email" class="text-sm text-orange-100">...</p>
+    </div>
+
+    <div class="p-4 mt-2 space-y-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm">
+            <h3 class="font-bold text-gray-800 mb-3 text-sm uppercase"><i class="fa-solid fa-address-card text-orange-500 mr-1"></i> Details</h3>
+            <div class="space-y-3">
+                <input type="tel" id="user-phone" placeholder="Phone Number" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500">
+                <textarea id="user-address" placeholder="Delivery Address" rows="3" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500"></textarea>
+                <button id="save-profile" class="w-full bg-orange-100 text-orange-600 font-bold py-2 rounded-lg text-sm hover:bg-orange-200">Save Details</button>
+            </div>
+        </div>
+
+        <button id="logout-btn" class="w-full bg-red-50 text-red-500 font-bold py-3 rounded-xl shadow-sm hover:bg-red-100 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+        </button>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="fixed bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center h-16 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <a href="index.html" class="flex flex-col items-center text-gray-400 hover:text-orange-500"><i class="fa-solid fa-house text-xl"></i></a>
+        <a href="cart.html" class="flex flex-col items-center text-gray-400 hover:text-orange-500"><i class="fa-solid fa-cart-shopping text-xl"></i></a>
+        <a href="order.html" class="flex flex-col items-center text-gray-400 hover:text-orange-500"><i class="fa-solid fa-box-open text-xl"></i></a>
+        <a href="profile.html" class="flex flex-col items-center text-orange-500"><i class="fa-solid fa-user text-xl"></i></a>
+    </div>
+
+    <script type="module">
+        import { auth, db, doc, getDoc, updateDoc, onAuthStateChanged, signOut } from './common/firebase-config.js';
+        import './common/security.js';
+
+        let currentUserDoc = null;
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                window.location.href = 'login.html';
+                return;
+            }
+            
+            document.getElementById('user-name').innerText = user.displayName;
+            document.getElementById('user-email').innerText = user.email;
+            if(user.photoURL) document.getElementById('user-pfp').src = user.photoURL;
+
+            currentUserDoc = doc(db, "users", user.uid);
+            const docSnap = await getDoc(currentUserDoc);
+            if(docSnap.exists()) {
+                const data = docSnap.data();
+                if(data.phone) document.getElementById('user-phone').value = data.phone;
+                if(data.address) document.getElementById('user-address').value = data.address;
+            }
+        });
+
+        document.getElementById('save-profile').addEventListener('click', async () => {
+            if(!currentUserDoc) return;
+            const btn = document.getElementById('save-profile');
+            btn.innerText = 'Saving...';
+            await updateDoc(currentUserDoc, {
+                phone: document.getElementById('user-phone').value,
+                address: document.getElementById('user-address').value
+            });
+            btn.innerText = 'Saved!';
+            setTimeout(() => btn.innerText = 'Save Details', 2000);
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            await signOut(auth);
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>
