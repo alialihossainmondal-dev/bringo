@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bringo - Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-orange-50 h-screen flex items-center justify-center select-none overflow-hidden">
+    <div class="bg-white p-8 rounded-2xl shadow-xl text-center w-80">
+        <div class="w-20 h-20 bg-orange-500 rounded-full mx-auto mb-4 flex items-center justify-center shadow-lg">
+            <i class="fa-solid fa-bag-shopping text-4xl text-yellow-300"></i>
+        </div>
+        <h1 class="text-3xl font-bold text-orange-600 mb-2">Bringo</h1>
+        <p class="text-gray-500 text-sm mb-8">Your daily needs, delivered.</p>
+        
+        <button id="google-login" class="w-full bg-yellow-400 hover:bg-yellow-500 text-orange-900 font-bold py-3 px-4 rounded-xl shadow transition duration-200 flex items-center justify-center gap-2">
+            <i class="fa-brands fa-google"></i> Continue with Google
+        </button>
+    </div>
+
+    <script type="module">
+        import { auth, provider, signInWithPopup, db, doc, setDoc, getDoc } from './common/firebase-config.js';
+        import './common/security.js';
+
+        document.getElementById('google-login').addEventListener('click', async () => {
+            try {
+                const result = await signInWithPopup(auth, provider);
+                const user = result.user;
+                
+                // Save user to Firestore if new
+                const userRef = doc(db, 'users', user.uid);
+                const userSnap = await getDoc(userRef);
+                
+                if (!userSnap.exists()) {
+                    await setDoc(userRef, {
+                        uid: user.uid,
+                        name: user.displayName,
+                        email: user.email,
+                        photoURL: user.photoURL,
+                        created_at: new Date()
+                    });
+                }
+                window.location.href = 'index.html';
+            } catch (error) {
+                alert("Login Failed: " + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
