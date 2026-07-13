@@ -74,6 +74,16 @@
         <!-- Dynamic QR Section (Hidden by default, shows after Place Order is clicked for prepaid) -->
         <div id="qr-section" class="bg-white p-4 rounded-xl shadow-sm hidden text-center border border-orange-200 bg-orange-50 mt-4">
             <h3 class="font-bold text-gray-800 mb-2 text-sm">Scan to Pay <span id="pay-amount-qr" class="text-orange-600 text-lg"></span></h3>
+            
+            <!-- UPI ID & Copy Box -->
+            <div class="bg-white border border-gray-300 rounded-lg p-2 mb-1 flex justify-between items-center max-w-[240px] mx-auto shadow-sm">
+                <span class="text-[12px] text-gray-500 font-bold truncate">UPI: <span class="text-gray-800 select-all">alialihossainmondal-1@oksbi</span></span>
+                <button id="copy-upi-btn" class="text-orange-500 hover:text-orange-700 transition px-2 py-1 bg-orange-50 rounded">
+                    <i class="fa-regular fa-copy"></i>
+                </button>
+            </div>
+            <p id="copy-msg" class="text-[10px] text-green-600 font-bold hidden mb-3">Copied to clipboard!</p>
+            
             <img id="dynamic-qr" src="" alt="UPI QR" class="w-40 h-40 mx-auto border-2 border-yellow-400 rounded-lg mb-3 object-contain bg-white">
             <p id="live-payment-status" class="text-sm font-bold text-orange-600 mt-2 animate-pulse">
                 <i class="fa-solid fa-spinner fa-spin"></i> Waiting for payment confirmation...
@@ -83,7 +93,6 @@
     </div>
 
     <script type="module">
-        // UPDATE 1: onSnapshot এবং setDoc ইমপোর্ট করা হলো 
         import { auth, db, doc, getDoc, setDoc, collection, onAuthStateChanged, query, where, getDocs, onSnapshot } from './common/firebase-config.js';
         
         let cart = JSON.parse(localStorage.getItem('bringo_cart')) || [];
@@ -102,6 +111,18 @@
         document.getElementById('subtotal-amount').innerText = `₹${cartSubTotal}`;
         document.getElementById('pay-amount-top').innerText = `₹${cartTotal}`;
         document.getElementById('pay-amount-qr').innerText = `₹${cartTotal}`;
+
+        // UPI Copy Logic
+        document.getElementById('copy-upi-btn').addEventListener('click', () => {
+            const upiIdText = "alialihossainmondal-1@oksbi";
+            navigator.clipboard.writeText(upiIdText).then(() => {
+                const copyMsg = document.getElementById('copy-msg');
+                copyMsg.classList.remove('hidden');
+                setTimeout(() => {
+                    copyMsg.classList.add('hidden');
+                }, 2000);
+            });
+        });
 
         // Dynamic Promo Code Logic
         document.getElementById('apply-promo-btn').addEventListener('click', async () => {
@@ -180,7 +201,7 @@
             }
         });
 
-        // Place Order Logic (UPDATED FOR AUTOMATED PAYMENT)
+        // Place Order Logic 
         document.getElementById('place-order-btn').addEventListener('click', async () => {
             const address = document.getElementById('address').value;
             const phone = document.getElementById('phone').value;
@@ -193,13 +214,11 @@
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
             btn.disabled = true;
 
-            // ইউনিক অর্ডার আইডি তৈরি করা হচ্ছে
             const orderId = "BRG" + Date.now() + Math.floor(Math.random() * 100); 
 
             try {
-                // UPDATE 2: addDoc এর বদলে setDoc ব্যবহার করা হলো যাতে আমরা নিজেদের তৈরি orderId দিয়ে ডাটা সেভ করতে পারি
                 await setDoc(doc(db, 'orders', orderId), {
-                    order_id: orderId, // ডাটাবেসে আইডির রেকর্ড রাখার জন্য
+                    order_id: orderId,
                     user_id: auth.currentUser.uid,
                     subtotal: cartSubTotal,
                     discount_amount: appliedDiscount,
@@ -209,32 +228,27 @@
                     phone_number: phone,
                     customer_notes: notes || 'No extra notes provided',
                     payment_method: method,
-                    status: method === 'prepaid' ? 'Pending Payment' : 'Placed', // Prepaid হলে প্রথমে Pending থাকবে
+                    status: method === 'prepaid' ? 'Pending Payment' : 'Placed', 
                     created_at: new Date(),
                     items: cart
                 });
                 
                 if (method === 'cod') {
-                    // COD হলে সরাসরি কনফার্ম হয়ে যাবে
                     localStorage.removeItem('bringo_cart');
                     alert('Order Placed Successfully!');
                     window.location.href = 'order.html';
                 } else {
-                    // UPDATE 3: Prepaid হলে ডাইনামিক QR তৈরি হবে এবং লাইভ স্ট্যাটাস চেক শুরু হবে
-                    
-                    // !!! সতর্কতা: এখানে আপনার আসল UPI আইডি বসান !!!
                     const upiId = "alialihossainmondal-1@oksbi"; 
-                    
                     const upiLink = `upi://pay?pa=${upiId}&pn=Bringo&am=${cartTotal}&tr=${orderId}`;
-                    const qrUrl = `https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl=${encodeURIComponent(upiLink)}`;
+                    
+                    // UPDATE: নতুন qrserver API ব্যবহার করা হলো যাতে ফাস্ট লোড হয়
+                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiLink)}`;
                     
                     document.getElementById('dynamic-qr').src = qrUrl;
                     
-                    // প্লেস অর্ডার বাটনটি লুকিয়ে QR কোডের সেকশনটি দেখানো হলো
                     btn.classList.add('hidden');
                     qrSection.classList.remove('hidden');
 
-                    // UPDATE 4: Firebase ডাটাবেসে রিয়েল-টাইম লিসেনার (লাইভ ভেরিফিকেশন)
                     onSnapshot(doc(db, 'orders', orderId), (snapshot) => {
                         if (snapshot.exists() && snapshot.data().status === 'Success') {
                             const statusElem = document.getElementById('live-payment-status');
@@ -244,7 +258,6 @@
                             
                             localStorage.removeItem('bringo_cart');
                             
-                            // ২ সেকেন্ড পর কাস্টমারকে অর্ডারের পেজে পাঠিয়ে দেওয়া হবে
                             setTimeout(() => {
                                 window.location.href = 'order.html';
                             }, 2000);
