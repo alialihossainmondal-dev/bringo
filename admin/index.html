@@ -27,31 +27,10 @@
             </div>
         </div>
 
-        <!-- Alerts Section -->
-        <div id="alert-section" class="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded-lg mb-6 shadow-sm hidden">
-            <div class="flex items-center">
-                <i class="fa-solid fa-bell text-yellow-600 text-xl mr-3 animate-pulse"></i>
-                <div>
-                    <h4 class="text-sm font-bold text-yellow-800">Pending Approvals</h4>
-                    <p id="alert-text" class="text-xs text-yellow-700">0 Prepaid orders await Transaction ID verification.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Generated Code Display (Hidden by default) -->
-        <div id="generated-code-display" class="hidden bg-orange-50 border border-orange-200 p-4 rounded-xl shadow-sm mb-6 text-center transition-all">
-            <h2 class="font-bold text-orange-800 mb-1 text-sm"><i class="fa-solid fa-circle-check"></i> Code Generated!</h2>
-            <p class="text-[11px] text-gray-600 mb-2">Copy this code and send it to the customer on WhatsApp.</p>
-            <div class="bg-white p-2 rounded-lg border border-orange-200 inline-block px-6 shadow-inner">
-                <p id="new-code-text" class="text-xl font-black text-orange-600 tracking-widest select-all"></p>
-            </div>
-        </div>
-
         <!-- Quick Actions -->
         <h2 class="font-bold text-gray-700 mb-3 uppercase text-sm">Management</h2>
-        <div class="grid grid-cols-4 gap-2 text-center">
+        <div class="grid grid-cols-3 gap-2 text-center mb-6">
             
-            <!-- Banners Button -->
             <a href="banner.html" class="bg-white p-3 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50 transition">
                 <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mb-1">
                     <i class="fa-solid fa-images text-orange-500"></i>
@@ -59,7 +38,6 @@
                 <span class="text-[10px] font-bold text-gray-600 uppercase">Banners</span>
             </a>
 
-            <!-- Products Button -->
             <a href="product.html" class="bg-white p-3 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50 transition">
                 <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mb-1">
                     <i class="fa-solid fa-box text-orange-500"></i>
@@ -67,7 +45,6 @@
                 <span class="text-[10px] font-bold text-gray-600 uppercase">Products</span>
             </a>
             
-            <!-- Categories Button -->
             <a href="category.html" class="bg-white p-3 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50 transition">
                 <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mb-1">
                     <i class="fa-solid fa-list text-orange-500"></i>
@@ -75,7 +52,6 @@
                 <span class="text-[10px] font-bold text-gray-600 uppercase">Categories</span>
             </a>
             
-            <!-- Orders Button -->
             <a href="order.html" class="bg-white p-3 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50 transition">
                 <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mb-1">
                     <i class="fa-solid fa-truck text-orange-500"></i>
@@ -83,104 +59,163 @@
                 <span class="text-[10px] font-bold text-gray-600 uppercase">Orders</span>
             </a>
 
-            <!-- Coupons Button -->
             <a href="coupon.html" class="bg-white p-3 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50 transition">
                 <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mb-1">
                     <i class="fa-solid fa-ticket text-orange-500"></i>
                 </div>
                 <span class="text-[10px] font-bold text-gray-600 uppercase">Coupons</span>
             </a>
-
-            <!-- Master Code Button (NEW) -->
-            <button id="generate-code-btn" class="bg-white p-3 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50 transition">
-                <div id="code-icon-container" class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mb-1">
-                    <i class="fa-solid fa-key text-orange-500"></i>
-                </div>
-                <span class="text-[10px] font-bold text-gray-600 uppercase">Gen Code</span>
-            </button>
             
-            <!-- Users Button (Full width at bottom) -->
-            <a href="user.html" class="bg-white p-3 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50 transition col-span-4 mt-1">
+            <a href="user.html" class="bg-white p-3 rounded-xl shadow-sm flex flex-col items-center hover:bg-orange-50 transition">
                 <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mb-1">
                     <i class="fa-solid fa-users text-orange-500"></i>
                 </div>
-                <span class="text-[10px] font-bold text-gray-600 uppercase">Registered Users</span>
+                <span class="text-[10px] font-bold text-gray-600 uppercase">Users</span>
             </a>
+        </div>
+
+        <!-- Master Codes Management Section -->
+        <h2 class="font-bold text-gray-700 mb-3 uppercase text-sm"><i class="fa-solid fa-key text-blue-500 mr-1"></i> Master Codes</h2>
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-6 border border-gray-200">
+            
+            <button id="generate-code-btn" class="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg shadow hover:bg-blue-700 transition flex justify-center items-center gap-2 mb-4">
+                <i class="fa-solid fa-plus"></i> Generate New Code
+            </button>
+            
+            <!-- Code Display Box -->
+            <div id="generated-code-display" class="hidden bg-blue-50 border border-blue-200 p-3 rounded-lg text-center mb-4">
+                <p class="text-[11px] text-blue-600 mb-1 font-bold">New Code Ready! Send to customer:</p>
+                <p id="new-code-text" class="text-xl font-black text-blue-700 tracking-widest select-all"></p>
+            </div>
+
+            <!-- Codes History Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm whitespace-nowrap">
+                    <thead>
+                        <tr class="border-b border-gray-200 text-gray-500">
+                            <th class="pb-2 font-bold text-xs uppercase">Code</th>
+                            <th class="pb-2 font-bold text-xs uppercase text-center">Status</th>
+                            <th class="pb-2 font-bold text-xs uppercase text-right">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="codes-table-body">
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-xs text-gray-400">
+                                <i class="fa-solid fa-spinner fa-spin"></i> Loading codes...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <script type="module">
         import { db, collection, getDocs, addDoc } from '../common/firebase-config.js';
 
-        // Master Code Generation Logic
-        document.getElementById('generate-code-btn').addEventListener('click', async () => {
-            const iconContainer = document.getElementById('code-icon-container');
-            
-            // Loading Animation শুরু করা
-            iconContainer.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-orange-500"></i>';
+        // 1. Dashboard Stats
+        async function fetchDashboardStats() {
+            try {
+                const querySnapshot = await getDocs(collection(db, "orders"));
+                let totalRevenue = 0, totalOrders = 0;
+                
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    totalOrders++;
+                    if(data.status !== 'Cancelled') {
+                        totalRevenue += Number(data.total_amount || 0);
+                    }
+                });
 
-            // ৫ ডিজিটের র্যান্ডম কোড তৈরি (যেমন: BB-74892)
+                document.getElementById('total-revenue').innerText = `₹${totalRevenue}`;
+                document.getElementById('total-orders').innerText = totalOrders;
+            } catch (error) {
+                console.error("Error fetching stats:", error);
+                document.getElementById('total-revenue').innerText = "Error";
+                document.getElementById('total-orders').innerText = "Error";
+            }
+        }
+
+        // 2. Load Master Codes History
+        async function loadMasterCodes() {
+            const tbody = document.getElementById('codes-table-body');
+            try {
+                const querySnapshot = await getDocs(collection(db, "master_codes"));
+                let codes = [];
+                
+                querySnapshot.forEach(doc => {
+                    codes.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // সবথেকে নতুন কোডগুলো ওপরে দেখানোর জন্য সর্টিং
+                codes.sort((a, b) => b.created_at.toMillis() - a.created_at.toMillis());
+
+                tbody.innerHTML = '';
+                
+                if (codes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-xs text-gray-500">No codes generated yet.</td></tr>';
+                    return;
+                }
+
+                codes.forEach(code => {
+                    const statusHtml = code.is_used 
+                        ? `<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-[10px] font-bold">Used</span>` 
+                        : `<span class="bg-green-100 text-green-600 px-2 py-1 rounded text-[10px] font-bold">Available</span>`;
+                    
+                    // Date formatting with safety check
+                    let dateStr = "Just now";
+                    if(code.created_at && code.created_at.toDate) {
+                        const dateObj = code.created_at.toDate();
+                        dateStr = dateObj.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) + ' ' + dateObj.toLocaleTimeString('en-IN', { hour: '2-digit', minute:'2-digit' });
+                    }
+
+                    tbody.innerHTML += `
+                        <tr class="border-b border-gray-100 hover:bg-gray-50">
+                            <td class="py-3 font-bold text-gray-800 tracking-wider select-all">${code.code}</td>
+                            <td class="py-3 text-center">${statusHtml}</td>
+                            <td class="py-3 text-[10px] text-gray-500 text-right">${dateStr}</td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                console.error("Error loading codes:", error);
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-xs text-red-500">Error loading codes!</td></tr>';
+            }
+        }
+
+        // 3. Generate Master Code Action
+        document.getElementById('generate-code-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('generate-code-btn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+            btn.disabled = true;
+
             const randomNum = Math.floor(10000 + Math.random() * 90000);
             const newCode = "BB-" + randomNum;
 
             try {
-                // ফায়ারবেসে সেভ করা
                 await addDoc(collection(db, "master_codes"), {
                     code: newCode,
                     is_used: false,
                     created_at: new Date()
                 });
                 
-                // স্ক্রিনে কোডটি দেখানো
                 document.getElementById('generated-code-display').classList.remove('hidden');
                 document.getElementById('new-code-text').innerText = newCode;
                 
-                // Loading Animation বন্ধ করা
-                iconContainer.innerHTML = '<i class="fa-solid fa-key text-orange-500"></i>';
+                btn.innerHTML = '<i class="fa-solid fa-plus"></i> Generate New Code';
+                btn.disabled = false;
+
+                loadMasterCodes();
+
             } catch (error) {
                 alert("Error generating code: " + error.message);
-                iconContainer.innerHTML = '<i class="fa-solid fa-key text-orange-500"></i>';
+                btn.innerHTML = '<i class="fa-solid fa-plus"></i> Generate New Code';
+                btn.disabled = false;
             }
         });
 
-        // Dashboard Stats Logic
-        async function fetchDashboardStats() {
-            try {
-                const querySnapshot = await getDocs(collection(db, "orders"));
-                
-                let totalRevenue = 0;
-                let totalOrders = 0;
-                let pendingPrepaid = 0;
-
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    totalOrders++;
-                    
-                    if(data.status !== 'Cancelled') {
-                        totalRevenue += Number(data.total_amount || 0);
-                    }
-
-                    if(data.payment_method === 'prepaid' && data.status === 'Placed') {
-                        pendingPrepaid++;
-                    }
-                });
-
-                document.getElementById('total-revenue').innerText = `₹${totalRevenue}`;
-                document.getElementById('total-orders').innerText = totalOrders;
-
-                if(pendingPrepaid > 0) {
-                    document.getElementById('alert-section').classList.remove('hidden');
-                    document.getElementById('alert-text').innerText = `${pendingPrepaid} Prepaid order(s) await Transaction ID verification.`;
-                }
-
-            } catch (error) {
-                console.error("Error fetching stats: ", error);
-                document.getElementById('total-revenue').innerText = "Error";
-                document.getElementById('total-orders').innerText = "Error";
-            }
-        }
-
         fetchDashboardStats();
+        loadMasterCodes();
     </script>
 </body>
 </html>
