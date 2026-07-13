@@ -14,8 +14,14 @@
     </div>
 
     <div class="p-4 space-y-4">
+        <!-- Order Summary -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-400">
+            <h2 class="font-bold text-gray-800 mb-1">Total Amount to Pay</h2>
+            <p id="pay-amount-top" class="text-2xl font-black text-orange-600">₹0</p>
+        </div>
+
         <div class="bg-white p-4 rounded-xl shadow-sm">
-            <h2 class="font-bold text-gray-800 mb-3"><i class="fa-solid fa-location-dot text-orange-500"></i> Delivery Address</h2>
+            <h2 class="font-bold text-gray-800 mb-3"><i class="fa-solid fa-location-dot text-orange-500"></i> Delivery Details</h2>
             <textarea id="address" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500" rows="3" placeholder="Enter complete address"></textarea>
             <input type="tel" id="phone" class="w-full border rounded-lg p-2 mt-2 text-sm focus:outline-none focus:border-orange-500" placeholder="Phone Number">
         </div>
@@ -26,32 +32,52 @@
                 <option value="cod">Cash on Delivery (COD)</option>
                 <option value="prepaid">Prepaid (UPI QR)</option>
             </select>
+            <p id="prepaid-warning" class="text-xs text-red-500 mt-2 font-bold hidden"><i class="fa-solid fa-circle-exclamation"></i> Some items in your cart are "Prepaid Only". COD is disabled.</p>
         </div>
 
         <div id="qr-section" class="bg-white p-4 rounded-xl shadow-sm hidden text-center border-2 border-orange-400">
-            <h3 class="font-bold text-gray-800 mb-2">Scan to Pay <span id="pay-amount" class="text-orange-600"></span></h3>
+            <h3 class="font-bold text-gray-800 mb-2">Scan to Pay <span id="pay-amount-qr" class="text-orange-600"></span></h3>
             <img id="admin-qr" src="" alt="UPI QR" class="w-48 h-48 mx-auto border-2 border-yellow-400 rounded-lg mb-3 object-contain">
-            <input type="text" id="transaction-id" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500" placeholder="Enter UTR / Transaction ID (Required)">
+            <input type="text" id="transaction-id" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500 text-center font-bold" placeholder="Enter UTR / Transaction ID (Required)">
         </div>
 
         <button id="place-order-btn" class="w-full bg-orange-500 text-white font-bold py-3 rounded-xl shadow-lg mt-4 hover:bg-orange-600">
-            Place Order
+            Confirm & Place Order
         </button>
     </div>
 
     <script type="module">
         import { auth, db, doc, getDoc, addDoc, collection, onAuthStateChanged } from './common/firebase-config.js';
         
-        // NEW: Force Login Check
+        // Cart Logic
+        let cart = JSON.parse(localStorage.getItem('bringo_cart')) || [];
+        if(cart.length === 0) {
+            window.location.href = 'index.html';
+        }
+
+        let cartTotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        let requiresPrepaid = cart.some(item => item.type === 'Prepaid');
+
+        document.getElementById('pay-amount-top').innerText = `₹${cartTotal}`;
+        document.getElementById('pay-amount-qr').innerText = `₹${cartTotal}`;
+
+        const paymentSelect = document.getElementById('payment-method');
+        const qrSection = document.getElementById('qr-section');
+
+        // Check if any product is prepaid only
+        if(requiresPrepaid) {
+            paymentSelect.value = 'prepaid';
+            paymentSelect.disabled = true; // Prevent changing to COD
+            qrSection.classList.remove('hidden');
+            document.getElementById('prepaid-warning').classList.remove('hidden');
+        }
+
         onAuthStateChanged(auth, (user) => {
             if (!user) {
                 alert("Please login to place an order!");
                 window.location.href = 'login.html';
             }
         });
-
-        let cartTotal = 1500;
-        document.getElementById('pay-amount').innerText = `₹${cartTotal}`;
 
         async function fetchSettings() {
             const docSnap = await getDoc(doc(db, 'settings', 'global'));
@@ -60,9 +86,6 @@
             }
         }
         fetchSettings();
-
-        const paymentSelect = document.getElementById('payment-method');
-        const qrSection = document.getElementById('qr-section');
 
         paymentSelect.addEventListener('change', (e) => {
             if(e.target.value === 'prepaid') qrSection.classList.remove('hidden');
@@ -80,6 +103,7 @@
             if(method === 'prepaid' && !txId) return alert('Enter Transaction ID for prepaid orders');
 
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+            btn.disabled = true;
 
             try {
                 await addDoc(collection(db, 'orders'), {
@@ -89,13 +113,17 @@
                     transaction_id: method === 'prepaid' ? txId : null,
                     status: 'Placed',
                     created_at: new Date(),
-                    items: [] 
+                    items: cart // আসল প্রোডাক্টগুলো ডাটাবেসে পাঠাবে
                 });
+                
+                // অর্ডার হওয়ার পর কার্ট খালি করে দেওয়া
+                localStorage.removeItem('bringo_cart');
                 alert('Order Placed Successfully!');
                 window.location.href = 'order.html';
             } catch (error) {
                 alert("Error placing order: " + error.message);
-                btn.innerHTML = 'Place Order';
+                btn.innerHTML = 'Confirm & Place Order';
+                btn.disabled = false;
             }
         });
     </script>
