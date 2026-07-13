@@ -6,6 +6,16 @@
     <title>Bringo - Checkout</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Progress bar animation for the success popup */
+        @keyframes loading-bar {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+        .animate-loading {
+            animation: loading-bar 2.5s ease-in-out forwards;
+        }
+    </style>
 </head>
 <body class="bg-gray-50 select-none pb-20">
     <!-- Header -->
@@ -82,6 +92,23 @@
         <button id="place-order-btn" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl shadow-lg mt-2 hover:bg-orange-600 transition-colors text-sm">
             Confirm & Place Order
         </button>
+    </div>
+
+    <!-- NEW: Animated Premium Success Popup Modal -->
+    <div id="success-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden flex items-center justify-center px-4 opacity-0 transition-opacity duration-300">
+        <div id="success-modal-content" class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl transform scale-90 transition-transform duration-300">
+            <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
+                <i class="fa-solid fa-check text-4xl text-green-500 animate-bounce"></i>
+            </div>
+            <h2 class="text-2xl font-black text-gray-800 mb-2">Awesome! 🎉</h2>
+            <p class="text-gray-500 text-sm mb-6">Your order has been placed successfully.</p>
+            
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-100 rounded-full h-1.5 mb-2 overflow-hidden">
+                <div class="bg-green-500 h-1.5 rounded-full animate-loading"></div>
+            </div>
+            <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Redirecting to My Orders...</p>
+        </div>
     </div>
 
     <script type="module">
@@ -188,30 +215,22 @@
             else masterCodeSection.classList.add('hidden');
         });
 
-        // UPDATED: Professional WhatsApp Redirect
+        // Professional WhatsApp Redirect
         document.getElementById('wp-redirect-btn').addEventListener('click', () => {
-            
-            // কাস্টমারের বর্তমান লেখা অ্যাড্রেস ও ফোন নম্বর নেওয়া
             const customerAddress = document.getElementById('address').value.trim() || 'Not filled yet';
             const customerPhone = document.getElementById('phone').value.trim() || 'Not filled yet';
             let userName = currentUser?.displayName || "Customer";
-
-            // প্রোডাক্টের সুন্দর লিস্ট তৈরি
-            let itemsList = cart.map((item, index) => `🛒 *${item.title || item.name || 'Product'}*\n      Qty: ${item.qty}   |   Price: ₹${item.price * item.qty}`).join('\n\n');
-            
-            // ডিসকাউন্ট থাকলে মেসেজে দেখাবে
+            let itemsList = cart.map((item) => `🛒 *${item.title || item.name || 'Product'}*\n      Qty: ${item.qty}   |   Price: ₹${item.price * item.qty}`).join('\n\n');
             let discountText = appliedDiscount > 0 ? `\n🎁 *Discount Applied:* -₹${appliedDiscount}` : '';
 
-            // একদম প্রফেশনাল মেসেজ ফরম্যাট
             let wpMessage = `🛍️ *NEW ORDER PAYMENT REQUEST* 🛍️\n\nHello Bringo Team, I want to pay for my prepaid order. Please check the details below and share the *Master Code*.\n\n👤 *CUSTOMER DETAILS:*\n*Name:* ${userName}\n*Phone:* ${customerPhone}\n*Address:* ${customerAddress}\n\n📦 *ORDER DETAILS:*\n${itemsList}\n\n💳 *BILLING SUMMARY:*\n*Subtotal:* ₹${cartSubTotal}${discountText}\n🧾 *TOTAL TO PAY: ₹${cartTotal}*\n\nWaiting for your reply & Master Code! ⏳`;
             
             let wpNumber = "917872075844"; 
             let wpUrl = `https://wa.me/${wpNumber}?text=${encodeURIComponent(wpMessage)}`;
-            
             window.open(wpUrl, '_blank');
         });
 
-        // Place Order Logic with Dynamic Master Code Verification
+        // Place Order Logic with STRICT ANTI-SCAM & Success Modal
         document.getElementById('place-order-btn').addEventListener('click', async () => {
             const address = document.getElementById('address').value;
             const phone = document.getElementById('phone').value;
@@ -240,7 +259,7 @@
                     if (querySnapshot.empty) {
                         btn.innerHTML = 'Confirm & Place Order';
                         btn.disabled = false;
-                        return alert("Invalid Master Code! Please get the code from WhatsApp.");
+                        return alert("Invalid Master Code! Please check again.");
                     }
 
                     const codeDoc = querySnapshot.docs[0];
@@ -250,13 +269,20 @@
                     if (codeData.is_used) {
                         btn.innerHTML = 'Confirm & Place Order';
                         btn.disabled = false;
-                        return alert("This Master Code has already been used!");
+                        return alert("This Master Code has already been used by someone!");
+                    }
+
+                    // ৩. [ANTI-SCAM LOGIC] চেক করুন টাকার অ্যামাউন্ট সমান কি না
+                    if (codeData.amount !== cartTotal) {
+                        btn.innerHTML = 'Confirm & Place Order';
+                        btn.disabled = false;
+                        return alert(`⚠️ Security Alert! This code is valid for ₹${codeData.amount} only. But your cart total is ₹${cartTotal}. Payment mismatch!`);
                     }
                     
                     codeDocId = codeDoc.id;
                 }
 
-                // ৩. কোড সঠিক হলে অর্ডার প্লেস করুন
+                // ৪. সবকিছু ঠিক থাকলে অর্ডার প্লেস করুন
                 await addDoc(collection(db, 'orders'), {
                     user_id: currentUser.uid,
                     subtotal: cartSubTotal,
@@ -273,18 +299,37 @@
                     items: cart
                 });
 
-                // ৪. প্রি-পেইড অর্ডার হলে ডাটাবেসে কোডটিকে 'Used' মার্ক করে দিন
+                // ৫. প্রি-পেইড অর্ডার হলে ডাটাবেসে কোডটিকে 'Used' মার্ক করে দিন
                 if (method === 'prepaid' && codeDocId) {
                     await updateDoc(doc(db, "master_codes", codeDocId), {
                         is_used: true,
                         used_by: currentUser.uid,
+                        used_for_amount: cartTotal,
                         used_at: new Date()
                     });
                 }
                 
+                // ৬. কার্ট খালি করা
                 localStorage.removeItem('bringo_cart');
-                alert('Order Placed Successfully!');
-                window.location.href = 'order.html';
+                
+                // ৭. SUCCESS MODAL দেখানো
+                const modal = document.getElementById('success-modal');
+                const modalContent = document.getElementById('success-modal-content');
+                
+                modal.classList.remove('hidden');
+                // Timeout to trigger transition
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                    modal.classList.add('opacity-100');
+                    modalContent.classList.remove('scale-90');
+                    modalContent.classList.add('scale-100');
+                }, 50);
+
+                // ৮. ২.৫ সেকেন্ড পর রিডাইরেক্ট করা
+                setTimeout(() => {
+                    window.location.href = 'order.html';
+                }, 2500);
+
             } catch (error) {
                 alert("Error placing order: " + error.message);
                 btn.innerHTML = 'Confirm & Place Order';
