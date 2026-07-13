@@ -6,78 +6,235 @@
     <title>Bringo - Product Details</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Hide scrollbar for image slider */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 </head>
 <body class="bg-white select-none pb-24">
+    
     <!-- Transparent/Floating Header -->
-    <div class="fixed top-0 w-full p-4 flex justify-between z-40">
-        <a href="javascript:history.back()" class="w-10 h-10 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow text-gray-800"><i class="fa-solid fa-arrow-left"></i></a>
-        <a href="cart.html" class="w-10 h-10 bg-white/80 backdrop-blur rounded-full flex items-center justify-center shadow text-orange-500 relative">
-            <i class="fa-solid fa-cart-shopping"></i>
-        </a>
+    <div class="fixed top-0 w-full p-4 flex justify-between z-40 pointer-events-none">
+        <a href="javascript:history.back()" class="w-10 h-10 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-md text-gray-800 pointer-events-auto hover:bg-orange-50 transition"><i class="fa-solid fa-arrow-left"></i></a>
+        
+        <div class="flex gap-2 pointer-events-auto">
+            <!-- Share Button -->
+            <button id="share-btn" class="w-10 h-10 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-md text-gray-800 hover:text-orange-500 hover:bg-orange-50 transition">
+                <i class="fa-solid fa-share-nodes"></i>
+            </button>
+            <a href="cart.html" class="w-10 h-10 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-md text-orange-500 hover:bg-orange-50 transition">
+                <i class="fa-solid fa-cart-shopping"></i>
+            </a>
+        </div>
     </div>
 
-    <!-- Product Image -->
-    <div class="w-full h-80 bg-gray-50 flex items-center justify-center p-8 relative">
-        <img id="pd-image" src="https://via.placeholder.com/300" class="w-full h-full object-contain drop-shadow-lg">
+    <!-- Product Image Slider (Supports Multiple Images) -->
+    <div id="pd-image-slider" class="flex overflow-x-auto snap-x snap-mandatory no-scrollbar w-full h-80 bg-gray-50 relative">
+        <div class="w-full h-full flex items-center justify-center absolute inset-0 text-orange-500"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>
+    </div>
+    
+    <!-- Swipe Indicator Note -->
+    <div id="swipe-hint" class="text-center text-[10px] text-gray-400 font-bold py-1 bg-gray-50 hidden">
+        <i class="fa-solid fa-arrows-left-right"></i> Swipe to see more images
     </div>
 
-    <div class="p-5 rounded-t-3xl -mt-6 bg-white relative z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-        <div class="flex justify-between items-start mb-2">
-            <h1 id="pd-name" class="text-2xl font-bold text-gray-800 leading-tight">Loading...</h1>
+    <!-- Product Info -->
+    <div class="p-5 rounded-t-3xl -mt-4 bg-white relative z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
+        <div class="flex justify-between items-start mb-1">
+            <h1 id="pd-name" class="text-xl font-bold text-gray-800 leading-tight">Loading...</h1>
         </div>
         <p id="pd-price" class="text-2xl font-black text-orange-600 mb-3">₹---</p>
         
-        <div class="flex gap-2 mb-4">
-            <span id="pd-stock" class="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full"><i class="fa-solid fa-check mr-1"></i> In Stock</span>
-            <span id="pd-type" class="bg-yellow-100 text-yellow-800 text-xs font-bold px-3 py-1 rounded-full">...</span>
+        <div class="flex gap-2 mb-5">
+            <span id="pd-stock" class="bg-green-100 text-green-700 text-[10px] font-bold px-3 py-1 rounded-md uppercase tracking-wide"><i class="fa-solid fa-check mr-1"></i> In Stock</span>
+            <span id="pd-type" class="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-3 py-1 rounded-md uppercase tracking-wide">...</span>
         </div>
 
-        <h3 class="font-bold text-gray-800 mb-1 text-sm uppercase">Description</h3>
-        <p id="pd-desc" class="text-gray-500 text-sm leading-relaxed mb-6">
+        <h3 class="font-bold text-gray-800 mb-2 text-sm uppercase border-b pb-1">Description</h3>
+        <p id="pd-desc" class="text-gray-500 text-sm leading-relaxed mb-6 whitespace-pre-line">
             ...
         </p>
+
+        <!-- Related Products Section -->
+        <div class="mt-8 mb-4">
+            <h3 class="font-bold text-gray-800 mb-3 text-sm uppercase flex items-center justify-between border-b pb-1">
+                Similar Products <i class="fa-solid fa-boxes-stacked text-orange-400"></i>
+            </h3>
+            <div class="grid grid-cols-2 gap-3" id="related-list">
+                <div class="text-center col-span-2 text-gray-400 text-xs py-4"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</div>
+            </div>
+        </div>
     </div>
 
-    <!-- Fixed Bottom Actions -->
-    <div class="fixed bottom-0 w-full bg-white border-t p-4 flex gap-3 z-50">
+    <!-- Fixed Bottom Add to Cart -->
+    <div class="fixed bottom-0 w-full bg-white border-t p-4 flex gap-3 z-50 shadow-[0_-4px_15px_rgba(0,0,0,0.05)]">
         <div class="flex items-center justify-between bg-gray-100 rounded-xl px-4 py-3 w-1/3">
-            <button class="text-gray-500 hover:text-orange-500"><i class="fa-solid fa-minus"></i></button>
-            <span class="font-bold text-gray-800">1</span>
-            <button class="text-gray-500 hover:text-orange-500"><i class="fa-solid fa-plus"></i></button>
+            <button id="qty-minus" class="text-gray-500 hover:text-orange-500 p-1"><i class="fa-solid fa-minus"></i></button>
+            <span id="qty-val" class="font-bold text-gray-800">1</span>
+            <button id="qty-plus" class="text-gray-500 hover:text-orange-500 p-1"><i class="fa-solid fa-plus"></i></button>
         </div>
-        <button class="flex-1 bg-orange-500 text-white font-bold rounded-xl shadow-lg hover:bg-orange-600 flex items-center justify-center gap-2">
+        <button id="add-to-cart-btn" class="flex-1 bg-orange-500 text-white font-bold rounded-xl shadow-lg hover:bg-orange-600 flex items-center justify-center gap-2 transition">
             <i class="fa-solid fa-bag-shopping"></i> Add to Cart
         </button>
     </div>
 
     <script type="module">
-        import { db, doc, getDoc } from './common/firebase-config.js';
-        import './common/security.js';
+        import { db, doc, getDoc, collection, query, where, getDocs } from './common/firebase-config.js';
 
         const urlParams = new URLSearchParams(window.location.search);
         const prodId = urlParams.get('id');
+        let currentProduct = null;
+        let selectedQty = 1;
 
         async function loadProductDetails() {
             if(!prodId) return window.location.href = 'index.html';
             
             const docSnap = await getDoc(doc(db, "products", prodId));
             if(docSnap.exists()) {
-                const data = docSnap.data();
-                document.getElementById('pd-image').src = data.image_url;
-                document.getElementById('pd-name').innerText = data.name;
-                document.getElementById('pd-price').innerText = `₹${data.price}`;
-                document.getElementById('pd-desc').innerText = data.description;
-                document.getElementById('pd-type').innerText = data.payment_type === 'Prepaid' ? 'Prepaid Only (QR Scan)' : 'COD Available';
+                currentProduct = docSnap.data();
+                currentProduct.id = docSnap.id;
                 
-                if(data.stock <= 0) {
-                    const stockBadge = document.getElementById('pd-stock');
-                    stockBadge.className = "bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full";
-                    stockBadge.innerHTML = '<i class="fa-solid fa-xmark mr-1"></i> Out of Stock';
+                document.getElementById('pd-name').innerText = currentProduct.name;
+                document.getElementById('pd-price').innerText = `₹${currentProduct.price}`;
+                document.getElementById('pd-desc').innerText = currentProduct.description;
+                document.getElementById('pd-type').innerText = currentProduct.payment_type === 'Prepaid' ? 'Prepaid Only (QR Scan)' : 'COD Available';
+                
+                // Image Slider Logic
+                const slider = document.getElementById('pd-image-slider');
+                if(currentProduct.images && currentProduct.images.length > 0) {
+                    slider.innerHTML = currentProduct.images.map(img => `<img src="${img}" class="snap-center w-full h-full object-contain shrink-0 bg-gray-50 p-4">`).join('');
+                    if(currentProduct.images.length > 1) {
+                        document.getElementById('swipe-hint').classList.remove('hidden');
+                    }
+                } else {
+                    slider.innerHTML = `<img src="${currentProduct.image_url}" class="snap-center w-full h-full object-contain shrink-0 bg-gray-50 p-4">`;
                 }
+                
+                // Stock Check
+                if(currentProduct.stock <= 0) {
+                    const stockBadge = document.getElementById('pd-stock');
+                    stockBadge.className = "bg-red-100 text-red-700 text-[10px] font-bold px-3 py-1 rounded-md uppercase tracking-wide";
+                    stockBadge.innerHTML = '<i class="fa-solid fa-xmark mr-1"></i> Out of Stock';
+                    document.getElementById('add-to-cart-btn').disabled = true;
+                    document.getElementById('add-to-cart-btn').classList.replace('bg-orange-500', 'bg-gray-400');
+                    document.getElementById('add-to-cart-btn').innerHTML = 'Out of Stock';
+                }
+
+                // Load Related Products based on Category
+                loadRelatedProducts(currentProduct.category);
             } else {
                 alert('Product not found');
+                window.location.href = 'index.html';
             }
         }
+
+        // Related Products Logic
+        async function loadRelatedProducts(category) {
+            const list = document.getElementById('related-list');
+            if(!category) {
+                list.innerHTML = `<div class="col-span-2 text-center text-xs text-gray-400 py-4">No related products.</div>`;
+                return;
+            }
+
+            const q = query(collection(db, "products"), where("category", "==", category));
+            const querySnapshot = await getDocs(q);
+            
+            list.innerHTML = '';
+            let count = 0;
+
+            querySnapshot.forEach((docSnap) => {
+                if(docSnap.id !== prodId && count < 4) { // বর্তমান প্রোডাক্ট বাদে সর্বোচ্চ ৪টি দেখাবে
+                    const data = docSnap.data();
+                    const badge = data.payment_type === 'Prepaid' ? '<span class="absolute top-2 left-2 bg-yellow-400 text-gray-800 text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm">Prepaid</span>' : '';
+                    
+                    list.innerHTML += `
+                        <a href="product_detail.html?id=${docSnap.id}" class="bg-gray-50 rounded-xl p-2 relative flex flex-col justify-between block hover:shadow-sm transition border border-gray-100">
+                            ${badge}
+                            <img src="${data.image_url}" class="w-full h-24 object-contain mb-2 rounded mix-blend-multiply">
+                            <div>
+                                <h3 class="text-[11px] font-bold text-gray-800 leading-tight truncate">${data.name}</h3>
+                                <p class="text-orange-600 font-bold text-xs mt-1">₹${data.price}</p>
+                            </div>
+                        </a>`;
+                    count++;
+                }
+            });
+
+            if(count === 0) {
+                list.innerHTML = `<div class="col-span-2 text-center text-xs text-gray-400 py-4">No similar products found.</div>`;
+            }
+        }
+
+        // Share Feature Logic
+        document.getElementById('share-btn').addEventListener('click', async () => {
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: currentProduct.name,
+                        text: `Check out this ${currentProduct.name} on Bringo!`,
+                        url: window.location.href,
+                    });
+                } catch (error) {
+                    console.log('Error sharing:', error);
+                }
+            } else {
+                // If browser doesn't support Web Share API (like older desktop browsers)
+                navigator.clipboard.writeText(window.location.href);
+                alert("Link copied to clipboard!");
+            }
+        });
+
+        // Quantity Logic
+        const qtyVal = document.getElementById('qty-val');
+        document.getElementById('qty-plus').addEventListener('click', () => {
+            if(selectedQty < currentProduct.stock) {
+                selectedQty++;
+                qtyVal.innerText = selectedQty;
+            } else {
+                alert(`Only ${currentProduct.stock} items left in stock!`);
+            }
+        });
+        document.getElementById('qty-minus').addEventListener('click', () => {
+            if(selectedQty > 1) {
+                selectedQty--;
+                qtyVal.innerText = selectedQty;
+            }
+        });
+
+        // Add to Cart Logic
+        document.getElementById('add-to-cart-btn').addEventListener('click', (e) => {
+            if(!currentProduct) return;
+
+            let cart = JSON.parse(localStorage.getItem('bringo_cart')) || [];
+            let existing = cart.find(item => item.id === prodId);
+            
+            if(existing) {
+                existing.qty += selectedQty;
+            } else {
+                cart.push({ 
+                    id: prodId, 
+                    name: currentProduct.name, 
+                    price: currentProduct.price, 
+                    image: currentProduct.image_url, 
+                    type: currentProduct.payment_type, 
+                    qty: selectedQty 
+                });
+            }
+            
+            localStorage.setItem('bringo_cart', JSON.stringify(cart));
+            
+            // Visual feedback
+            const btn = e.currentTarget;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Added to Cart';
+            btn.classList.replace('bg-orange-500', 'bg-green-500');
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.replace('bg-green-500', 'bg-orange-500');
+            }, 1500);
+        });
+
         loadProductDetails();
     </script>
 </body>
