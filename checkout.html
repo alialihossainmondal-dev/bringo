@@ -20,12 +20,21 @@
             <p id="pay-amount-top" class="text-2xl font-black text-orange-600">₹0</p>
         </div>
 
+        <!-- Delivery Details -->
         <div class="bg-white p-4 rounded-xl shadow-sm">
             <h2 class="font-bold text-gray-800 mb-3"><i class="fa-solid fa-location-dot text-orange-500"></i> Delivery Details</h2>
             <textarea id="address" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500" rows="3" placeholder="Enter complete address"></textarea>
             <input type="tel" id="phone" class="w-full border rounded-lg p-2 mt-2 text-sm focus:outline-none focus:border-orange-500" placeholder="Phone Number">
         </div>
 
+        <!-- NEW: Order Notes / Customization -->
+        <div class="bg-white p-4 rounded-xl shadow-sm">
+            <h2 class="font-bold text-gray-800 mb-1"><i class="fa-solid fa-clipboard-list text-orange-500"></i> Order Notes</h2>
+            <p class="text-[10px] text-gray-500 mb-3">Write your preferred Size, Color, or any other details here (Optional)</p>
+            <textarea id="order-notes" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500 bg-gray-50" rows="2" placeholder="E.g., Shirt Size: L, Color: Black..."></textarea>
+        </div>
+
+        <!-- Payment Method -->
         <div class="bg-white p-4 rounded-xl shadow-sm">
             <h2 class="font-bold text-gray-800 mb-3"><i class="fa-solid fa-wallet text-orange-500"></i> Payment Method</h2>
             <select id="payment-method" class="w-full border rounded-lg p-2 bg-gray-50 text-gray-800 focus:outline-none font-bold">
@@ -35,6 +44,7 @@
             <p id="prepaid-warning" class="text-xs text-red-500 mt-2 font-bold hidden"><i class="fa-solid fa-circle-exclamation"></i> Some items in your cart are "Prepaid Only". COD is disabled.</p>
         </div>
 
+        <!-- QR Section (Hidden by default) -->
         <div id="qr-section" class="bg-white p-4 rounded-xl shadow-sm hidden text-center border-2 border-orange-400">
             <h3 class="font-bold text-gray-800 mb-2">Scan to Pay <span id="pay-amount-qr" class="text-orange-600"></span></h3>
             <img id="admin-qr" src="" alt="UPI QR" class="w-48 h-48 mx-auto border-2 border-yellow-400 rounded-lg mb-3 object-contain">
@@ -95,6 +105,7 @@
         document.getElementById('place-order-btn').addEventListener('click', async () => {
             const address = document.getElementById('address').value;
             const phone = document.getElementById('phone').value;
+            const notes = document.getElementById('order-notes').value; // কাস্টমারের দেওয়া ডিটেইলস
             const method = paymentSelect.value;
             const txId = document.getElementById('transaction-id').value;
             const btn = document.getElementById('place-order-btn');
@@ -109,14 +120,16 @@
                 await addDoc(collection(db, 'orders'), {
                     user_id: auth.currentUser.uid,
                     total_amount: cartTotal,
+                    delivery_address: address,
+                    phone_number: phone,
+                    customer_notes: notes || 'No extra notes provided', // ডাটাবেসে সেভ হবে
                     payment_method: method,
                     transaction_id: method === 'prepaid' ? txId : null,
                     status: 'Placed',
                     created_at: new Date(),
-                    items: cart // আসল প্রোডাক্টগুলো ডাটাবেসে পাঠাবে
+                    items: cart
                 });
                 
-                // অর্ডার হওয়ার পর কার্ট খালি করে দেওয়া
                 localStorage.removeItem('bringo_cart');
                 alert('Order Placed Successfully!');
                 window.location.href = 'order.html';
