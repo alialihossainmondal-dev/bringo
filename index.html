@@ -21,7 +21,8 @@
             </a>
         </div>
         <div class="relative">
-            <input type="text" placeholder="Search for groceries, electronics..." class="w-full py-2 pl-10 pr-4 rounded-xl text-gray-800 text-sm focus:outline-none shadow-inner">
+            <!-- NEW: Added ID to Search Box -->
+            <input type="text" id="search-box" placeholder="Search products or categories..." class="w-full py-2 pl-10 pr-4 rounded-xl text-gray-800 text-sm focus:outline-none shadow-inner border-2 border-transparent focus:border-yellow-300 transition-colors">
             <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400"></i>
         </div>
     </div>
@@ -42,16 +43,18 @@
 
         <!-- Featured Products -->
         <div class="flex justify-between items-center mb-3">
-            <h2 class="font-bold text-gray-800 uppercase text-sm tracking-wide">Featured Items</h2>
-            <a href="product.html" class="text-xs text-orange-500 font-bold">See All</a>
+            <h2 class="font-bold text-gray-800 uppercase text-sm tracking-wide" id="product-section-title">Featured Items</h2>
+            <a href="product.html" class="text-xs text-orange-500 font-bold hidden">See All</a>
         </div>
+        
+        <!-- Product List -->
         <div class="grid grid-cols-2 gap-3" id="product-list">
             <div class="bg-white rounded-xl shadow-sm p-3 animate-pulse h-48"></div>
             <div class="bg-white rounded-xl shadow-sm p-3 animate-pulse h-48"></div>
         </div>
     </div>
 
-    <!-- NEW: Floating Instagram Help Button -->
+    <!-- Floating Instagram Help Button -->
     <a href="https://www.instagram.com/shopbringo?igsh=MWU2c2xjazJteDc3Yg==" target="_blank" class="fixed bottom-20 right-4 w-12 h-12 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg z-50 hover:scale-110 transition-transform border-2 border-white">
         <i class="fa-brands fa-instagram text-white text-2xl"></i>
     </a>
@@ -69,6 +72,9 @@
 
     <script type="module">
         import { db, collection, getDocs, auth, onAuthStateChanged } from './common/firebase-config.js';
+
+        // গ্লোবাল ভেরিয়েবল যেখানে সব প্রোডাক্ট সেভ থাকবে
+        let allProducts = [];
 
         onAuthStateChanged(auth, (user) => {
             const pfpLink = document.getElementById('user-pfp-link');
@@ -126,37 +132,89 @@
             snap.forEach((doc) => {
                 const data = doc.data();
                 list.innerHTML += `
-                    <div class="text-center min-w-[70px] cursor-pointer hover:opacity-80">
+                    <div class="text-center min-w-[70px] cursor-pointer hover:opacity-80 transition-opacity" onclick="filterByCategory('${data.name}')">
                         <img src="${data.image_url}" class="w-16 h-16 rounded-full mx-auto mb-1 border-2 border-orange-100 object-cover shadow-sm">
                         <p class="text-xs text-gray-700 font-medium">${data.name}</p>
                     </div>`;
             });
         }
 
-        async function loadProducts() {
-            const list = document.getElementById('product-list');
+        // প্রোডাক্ট ফায়ারবেস থেকে একবারই আনবে
+        async function fetchProducts() {
             const snap = await getDocs(collection(db, "products"));
-            list.innerHTML = '';
+            allProducts = []; // অ্যারে ক্লিয়ার করা হলো
             snap.forEach((doc) => {
                 const data = doc.data();
+                data.id = doc.id; // আইডি যুক্ত করা হলো
+                allProducts.push(data);
+            });
+            displayProducts(allProducts); // সব প্রোডাক্ট দেখাবে
+        }
+
+        // প্রোডাক্ট স্ক্রিনে দেখানোর ফাংশন
+        function displayProducts(productsToDisplay) {
+            const list = document.getElementById('product-list');
+            list.innerHTML = '';
+
+            if (productsToDisplay.length === 0) {
+                list.innerHTML = `
+                    <div class="col-span-2 text-center py-10 text-gray-400">
+                        <i class="fa-solid fa-box-open text-4xl mb-3 text-gray-300"></i>
+                        <p class="font-bold">No products found!</p>
+                        <p class="text-xs mt-1">Try searching with a different keyword.</p>
+                    </div>`;
+                return;
+            }
+
+            productsToDisplay.forEach((data) => {
                 const badge = data.payment_type === 'Prepaid' ? '<span class="absolute top-2 left-2 bg-yellow-400 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-md shadow">Prepaid Only</span>' : '';
-                
                 const safeName = data.name.replace(/'/g, "\\'");
                 
                 list.innerHTML += `
-                    <a href="product_detail.html?id=${doc.id}" class="bg-white rounded-xl shadow-sm p-3 relative flex flex-col justify-between block hover:shadow-md transition">
+                    <a href="product_detail.html?id=${data.id}" class="bg-white rounded-xl shadow-sm p-3 relative flex flex-col justify-between block hover:shadow-md transition">
                         ${badge}
                         <img src="${data.image_url}" class="w-full h-24 object-contain mb-2 rounded">
                         <div>
+                            <span class="text-[9px] font-bold text-orange-500 uppercase tracking-wider">${data.category || ''}</span>
                             <h3 class="text-sm font-bold text-gray-800 leading-tight truncate">${data.name}</h3>
                             <p class="text-orange-600 font-bold text-sm mt-1">₹${data.price}</p>
                         </div>
-                        <button onclick="event.preventDefault(); window.addToCart('${doc.id}', '${safeName}', ${data.price}, '${data.image_url}', '${data.payment_type}')" class="mt-2 w-full bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white transition rounded-lg py-1.5 text-sm font-bold flex justify-center items-center gap-2">
+                        <button onclick="event.preventDefault(); window.addToCart('${data.id}', '${safeName}', ${data.price}, '${data.image_url}', '${data.payment_type}')" class="mt-2 w-full bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white transition rounded-lg py-1.5 text-sm font-bold flex justify-center items-center gap-2">
                             <i class="fa-solid fa-plus"></i> Add
                         </button>
                     </a>`;
             });
         }
+
+        // NEW: লাইভ সার্চ লজিক
+        document.getElementById('search-box').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const sectionTitle = document.getElementById('product-section-title');
+            
+            if (searchTerm === '') {
+                sectionTitle.innerText = "Featured Items";
+                displayProducts(allProducts);
+            } else {
+                sectionTitle.innerText = `Search Results for "${searchTerm}"`;
+                // নাম অথবা ক্যাটাগরি দিয়ে ফিল্টার করবে
+                const filtered = allProducts.filter(product => 
+                    product.name.toLowerCase().includes(searchTerm) || 
+                    (product.category && product.category.toLowerCase().includes(searchTerm))
+                );
+                displayProducts(filtered);
+            }
+        });
+
+        // NEW: ক্যাটাগরিতে ক্লিক করলে ফিল্টার হবে
+        window.filterByCategory = (categoryName) => {
+            const sectionTitle = document.getElementById('product-section-title');
+            sectionTitle.innerText = `${categoryName} Products`;
+            const filtered = allProducts.filter(product => product.category === categoryName);
+            displayProducts(filtered);
+            
+            // স্ক্রল করে প্রোডাক্ট লিস্টের কাছে নিয়ে যাবে
+            document.getElementById('product-section-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
 
         window.addToCart = (id, name, price, image, type) => {
             let cart = JSON.parse(localStorage.getItem('bringo_cart')) || [];
@@ -185,7 +243,7 @@
 
         loadBanners();
         loadCategories();
-        loadProducts();
+        fetchProducts(); // এখানে আপডেট করা ফাংশন কল করা হলো
     </script>
 </body>
 </html>
