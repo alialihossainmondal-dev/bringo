@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-storage.js";
 
@@ -19,4 +19,4 @@ const auth = getAuth(app);
 const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
 
-export { db, auth, storage, provider, signInWithPopup, signOut, onAuthStateChanged, collection, getDocs, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, ref, uploadBytes, getDownloadURL };
+export { db, auth, storage, provider, signInWithPopup, signOut, onAuthStateChanged, collection, getDocs, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, query, where, onSnapshot, ref, uploadBytes, getDownloadURL };
