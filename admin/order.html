@@ -10,62 +10,112 @@
 <body class="bg-gray-100 select-none pb-20">
     <div class="bg-orange-600 text-white p-4 sticky top-0 flex items-center shadow-md z-40">
         <a href="index.html" class="mr-4"><i class="fa-solid fa-arrow-left text-xl"></i></a>
-        <h1 class="text-xl font-bold">Order Management</h1>
+        <h1 class="text-xl font-bold">Manage Orders</h1>
     </div>
 
-    <div class="p-4">
-        <!-- Filter Tabs -->
-        <div class="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
-            <button class="bg-orange-500 text-white px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap">All</button>
-            <button class="bg-white text-gray-600 border border-gray-200 px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap hover:bg-orange-50">Pending Verification</button>
-        </div>
-
-        <div id="admin-orders" class="space-y-3">
-            <div class="text-center text-sm text-gray-500 py-10"><i class="fa-solid fa-spinner fa-spin text-2xl"></i></div>
-        </div>
+    <div class="p-4" id="order-list">
+        <div class="text-center text-gray-500 mt-10"><i class="fa-solid fa-spinner fa-spin text-3xl"></i><br>Loading Orders...</div>
     </div>
 
     <script type="module">
-        import { db, collection, getDocs } from '../common/firebase-config.js';
+        import { db, collection, getDocs, doc, updateDoc, deleteDoc } from '../common/firebase-config.js';
 
-        async function loadAdminOrders() {
-            const list = document.getElementById('admin-orders');
-            const querySnapshot = await getDocs(collection(db, "orders"));
+        const loadOrders = async () => {
+            const list = document.getElementById('order-list');
+            const snap = await getDocs(collection(db, "orders"));
             list.innerHTML = '';
             
-            querySnapshot.forEach((docSnap) => {
-                const data = docSnap.data();
+            if(snap.empty) {
+                list.innerHTML = '<div class="text-center text-gray-400 mt-10">No orders found.</div>';
+                return;
+            }
+
+            // নতুন অর্ডারগুলো সবার উপরে দেখানোর জন্য সর্ট (Sort) করা হলো
+            let orders = [];
+            snap.forEach(doc => { orders.push({ id: doc.id, ...doc.data() }); });
+            orders.sort((a, b) => b.created_at.seconds - a.created_at.seconds);
+
+            orders.forEach(data => {
+                const date = new Date(data.created_at.seconds * 1000).toLocaleString();
+                const payBadge = data.payment_method === 'prepaid' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-200 text-gray-800';
+                const txId = data.transaction_id ? `<br><span class="text-xs text-gray-500 font-normal">Txn ID: ${data.transaction_id}</span>` : '';
                 
-                // Highlight logic for Prepaid orders that are newly placed
-                let isPendingPrepaid = (data.payment_method === 'prepaid' && data.status === 'Placed');
-                let cardStyle = isPendingPrepaid ? 'border-orange-500 bg-orange-50' : 'border-gray-200 bg-white';
-                let alertIcon = isPendingPrepaid ? '<i class="fa-solid fa-triangle-exclamation text-orange-500 ml-2 animate-pulse"></i>' : '';
+                // কাস্টমারের নোটস (সাইজ, কালার) থাকলে দেখাবে
+                const notes = data.customer_notes && data.customer_notes !== 'No extra notes provided' 
+                    ? `<div class="mt-2 p-2 bg-yellow-50 text-yellow-800 text-xs rounded border border-yellow-200"><b>Order Notes:</b> ${data.customer_notes}</div>` 
+                    : '';
+                
+                // অর্ডারের ভেতরের প্রোডাক্টগুলো
+                let itemsHtml = '';
+                if(data.items) {
+                    data.items.forEach(i => {
+                        itemsHtml += `<div class="text-xs text-gray-600 mt-1 flex justify-between border-b pb-1 border-gray-200"><span>${i.name} (x${i.qty})</span> <span>₹${i.price * i.qty}</span></div>`;
+                    });
+                }
 
                 list.innerHTML += `
-                    <div class="p-3 rounded-xl shadow-sm border-l-4 ${cardStyle} relative">
-                        <div class="flex justify-between items-start mb-2 border-b border-gray-100 pb-2">
+                    <div class="bg-white p-4 rounded-xl shadow-sm mb-4 border-l-4 border-orange-500 relative">
+                        <div class="flex justify-between items-start mb-2">
                             <div>
-                                <span class="text-xs font-bold text-gray-500">#${docSnap.id.slice(-6).toUpperCase()}</span>
-                                ${alertIcon}
+                                <h3 class="font-bold text-gray-800 text-xs">ID: <span class="font-normal text-gray-500">${data.id}</span></h3>
+                                <p class="text-[10px] text-gray-400">${date}</p>
                             </div>
-                            <span class="text-[10px] font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded">${data.status}</span>
+                            <span class="px-2 py-0.5 rounded text-[9px] font-bold ${payBadge} uppercase">${data.payment_method}</span>
                         </div>
                         
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <p class="text-sm font-bold text-gray-800">₹${data.total_amount}</p>
-                                <p class="text-[10px] text-gray-500 uppercase font-bold mt-1">
-                                    ${data.payment_method === 'prepaid' ? `<span class="text-orange-600">PREPAID</span> | TXN: ${data.transaction_id}` : 'COD'}
-                                </p>
-                            </div>
-                            <a href="order_detail.html?id=${docSnap.id}" class="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center shadow hover:bg-orange-600">
-                                <i class="fa-solid fa-chevron-right text-xs"></i>
-                            </a>
+                        <div class="mb-3 bg-gray-50 p-2 rounded">
+                            <p class="text-xs text-gray-700 mb-1"><i class="fa-solid fa-location-dot text-orange-400 mr-1"></i> ${data.delivery_address}</p>
+                            <p class="text-xs text-gray-700 font-bold"><i class="fa-solid fa-phone text-orange-400 mr-1"></i> ${data.phone_number}</p>
+                            ${txId}
                         </div>
+                        
+                        <div class="bg-gray-50 p-2 rounded mb-2">
+                            <h4 class="text-[11px] font-bold text-gray-500 uppercase mb-1">Purchased Items</h4>
+                            ${itemsHtml}
+                            <div class="text-sm font-black text-orange-600 text-right mt-2 pt-1 border-t border-gray-200">Total: ₹${data.total_amount}</div>
+                        </div>
+                        
+                        ${notes}
+
+                        <!-- Status Changer Dropdown -->
+                        <div class="mt-4 flex items-center gap-2 bg-orange-50 p-2 rounded-lg border border-orange-100">
+                            <label class="text-xs font-bold text-orange-800"><i class="fa-solid fa-truck-fast mr-1"></i> Status:</label>
+                            <select onchange="changeStatus('${data.id}', this.value)" class="flex-1 bg-white border rounded p-1.5 text-xs font-bold text-gray-700 outline-none focus:border-orange-500 cursor-pointer shadow-sm">
+                                <option value="Placed" ${data.status === 'Placed' ? 'selected' : ''}>1. Placed (New)</option>
+                                <option value="Processing" ${data.status === 'Processing' ? 'selected' : ''}>2. Processing / Packing</option>
+                                <option value="Shipped" ${data.status === 'Shipped' ? 'selected' : ''}>3. Shipped / Dispatched</option>
+                                <option value="Delivered" ${data.status === 'Delivered' ? 'selected' : ''}>4. Delivered</option>
+                                <option value="Cancelled" ${data.status === 'Cancelled' ? 'selected' : ''}>5. Cancelled</option>
+                            </select>
+                        </div>
+                        
+                        <button onclick="deleteOrder('${data.id}')" class="absolute top-2 right-2 text-gray-300 hover:text-red-500 p-2 transition"><i class="fa-solid fa-trash"></i></button>
                     </div>`;
             });
-        }
-        loadAdminOrders();
+        };
+
+        window.changeStatus = async (id, newStatus) => {
+            try {
+                await updateDoc(doc(db, "orders", id), { status: newStatus });
+                // ছোট্ট একটি অ্যালার্ট দিয়ে কনফার্ম করা
+                const toast = document.createElement('div');
+                toast.className = "fixed top-16 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-4 py-2 rounded-full text-xs font-bold z-50 shadow-lg";
+                toast.innerText = "Status Updated to " + newStatus;
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            } catch (e) {
+                alert("Error updating status: " + e.message);
+            }
+        };
+
+        window.deleteOrder = async (id) => {
+            if(confirm('Are you sure you want to delete this order?')) {
+                await deleteDoc(doc(db, "orders", id));
+                loadOrders();
+            }
+        };
+
+        loadOrders();
     </script>
 </body>
 </html>
