@@ -238,10 +238,10 @@
                     alert('Order Placed Successfully!');
                     window.location.href = 'order.html';
                 } else {
-                    const upiId = "alialihossainmondal-1@oksbi"; 
+                    // UPDATE: এখানে আপনার FamPay আইডি আপডেট করা হয়েছে
+                    const upiId = "7908352815@fam"; 
                     const upiLink = `upi://pay?pa=${upiId}&pn=Bringo&am=${cartTotal}&tr=${orderId}`;
                     
-                    // UPDATE: নতুন qrserver API ব্যবহার করা হলো যাতে ফাস্ট লোড হয়
                     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiLink)}`;
                     
                     document.getElementById('dynamic-qr').src = qrUrl;
