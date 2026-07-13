@@ -67,21 +67,24 @@
             <p id="prepaid-warning" class="text-xs text-red-500 mt-2 font-bold hidden"><i class="fa-solid fa-circle-exclamation"></i> Some items in your cart are "Prepaid Only". COD is disabled.</p>
         </div>
 
-        <!-- QR Section (Hidden by default) -->
-        <div id="qr-section" class="bg-white p-4 rounded-xl shadow-sm hidden text-center border border-orange-200 bg-orange-50/50">
-            <h3 class="font-bold text-gray-800 mb-2 text-sm">Scan to Pay <span id="pay-amount-qr" class="text-orange-600 text-lg"></span></h3>
-            <img id="admin-qr" src="" alt="UPI QR" class="w-40 h-40 mx-auto border-2 border-yellow-400 rounded-lg mb-3 object-contain bg-white">
-            <input type="text" id="transaction-id" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500 text-center font-bold" placeholder="Enter UTR / Transaction ID (Required)">
-        </div>
-
         <button id="place-order-btn" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl shadow-lg mt-2 hover:bg-orange-600 transition-colors text-sm">
             Confirm & Place Order
         </button>
+
+        <!-- Dynamic QR Section (Hidden by default, shows after Place Order is clicked for prepaid) -->
+        <div id="qr-section" class="bg-white p-4 rounded-xl shadow-sm hidden text-center border border-orange-200 bg-orange-50 mt-4">
+            <h3 class="font-bold text-gray-800 mb-2 text-sm">Scan to Pay <span id="pay-amount-qr" class="text-orange-600 text-lg"></span></h3>
+            <img id="dynamic-qr" src="" alt="UPI QR" class="w-40 h-40 mx-auto border-2 border-yellow-400 rounded-lg mb-3 object-contain bg-white">
+            <p id="live-payment-status" class="text-sm font-bold text-orange-600 mt-2 animate-pulse">
+                <i class="fa-solid fa-spinner fa-spin"></i> Waiting for payment confirmation...
+            </p>
+            <p class="text-[11px] text-gray-500 mt-2">Do not close this page. It will redirect automatically after payment.</p>
+        </div>
     </div>
 
     <script type="module">
-        // খেয়াল করুন: এখানে query, where, getDocs সবকিছু ইমপোর্ট করা হয়েছে
-        import { auth, db, doc, getDoc, addDoc, collection, onAuthStateChanged, query, where, getDocs } from './common/firebase-config.js';
+        // UPDATE 1: onSnapshot এবং setDoc ইমপোর্ট করা হলো 
+        import { auth, db, doc, getDoc, setDoc, collection, onAuthStateChanged, query, where, getDocs, onSnapshot } from './common/firebase-config.js';
         
         let cart = JSON.parse(localStorage.getItem('bringo_cart')) || [];
         if(cart.length === 0) {
@@ -167,7 +170,6 @@
         if(requiresPrepaid) {
             paymentSelect.value = 'prepaid';
             paymentSelect.disabled = true;
-            qrSection.classList.remove('hidden');
             document.getElementById('prepaid-warning').classList.remove('hidden');
         }
 
@@ -178,40 +180,26 @@
             }
         });
 
-        async function fetchSettings() {
-            try {
-                const docSnap = await getDoc(doc(db, 'settings', 'global'));
-                if (docSnap.exists() && docSnap.data().upi_qr_code_image_url) {
-                    document.getElementById('admin-qr').src = docSnap.data().upi_qr_code_image_url;
-                }
-            } catch (e) {
-                console.log("No QR Code set yet.");
-            }
-        }
-        fetchSettings();
-
-        paymentSelect.addEventListener('change', (e) => {
-            if(e.target.value === 'prepaid') qrSection.classList.remove('hidden');
-            else qrSection.classList.add('hidden');
-        });
-
-        // Place Order Logic
+        // Place Order Logic (UPDATED FOR AUTOMATED PAYMENT)
         document.getElementById('place-order-btn').addEventListener('click', async () => {
             const address = document.getElementById('address').value;
             const phone = document.getElementById('phone').value;
             const notes = document.getElementById('order-notes').value;
             const method = paymentSelect.value;
-            const txId = document.getElementById('transaction-id').value;
             const btn = document.getElementById('place-order-btn');
 
             if(!address || !phone) return alert('Enter complete address and phone number');
-            if(method === 'prepaid' && !txId) return alert('Enter Transaction ID for prepaid orders');
 
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
             btn.disabled = true;
 
+            // ইউনিক অর্ডার আইডি তৈরি করা হচ্ছে
+            const orderId = "BRG" + Date.now() + Math.floor(Math.random() * 100); 
+
             try {
-                await addDoc(collection(db, 'orders'), {
+                // UPDATE 2: addDoc এর বদলে setDoc ব্যবহার করা হলো যাতে আমরা নিজেদের তৈরি orderId দিয়ে ডাটা সেভ করতে পারি
+                await setDoc(doc(db, 'orders', orderId), {
+                    order_id: orderId, // ডাটাবেসে আইডির রেকর্ড রাখার জন্য
                     user_id: auth.currentUser.uid,
                     subtotal: cartSubTotal,
                     discount_amount: appliedDiscount,
@@ -221,15 +209,48 @@
                     phone_number: phone,
                     customer_notes: notes || 'No extra notes provided',
                     payment_method: method,
-                    transaction_id: method === 'prepaid' ? txId : null,
-                    status: 'Placed',
+                    status: method === 'prepaid' ? 'Pending Payment' : 'Placed', // Prepaid হলে প্রথমে Pending থাকবে
                     created_at: new Date(),
                     items: cart
                 });
                 
-                localStorage.removeItem('bringo_cart');
-                alert('Order Placed Successfully!');
-                window.location.href = 'order.html';
+                if (method === 'cod') {
+                    // COD হলে সরাসরি কনফার্ম হয়ে যাবে
+                    localStorage.removeItem('bringo_cart');
+                    alert('Order Placed Successfully!');
+                    window.location.href = 'order.html';
+                } else {
+                    // UPDATE 3: Prepaid হলে ডাইনামিক QR তৈরি হবে এবং লাইভ স্ট্যাটাস চেক শুরু হবে
+                    
+                    // !!! সতর্কতা: এখানে আপনার আসল UPI আইডি বসান !!!
+                    const upiId = "yourupi@bank"; 
+                    
+                    const upiLink = `upi://pay?pa=${upiId}&pn=Bringo&am=${cartTotal}&tr=${orderId}`;
+                    const qrUrl = `https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl=${encodeURIComponent(upiLink)}`;
+                    
+                    document.getElementById('dynamic-qr').src = qrUrl;
+                    
+                    // প্লেস অর্ডার বাটনটি লুকিয়ে QR কোডের সেকশনটি দেখানো হলো
+                    btn.classList.add('hidden');
+                    qrSection.classList.remove('hidden');
+
+                    // UPDATE 4: Firebase ডাটাবেসে রিয়েল-টাইম লিসেনার (লাইভ ভেরিফিকেশন)
+                    onSnapshot(doc(db, 'orders', orderId), (snapshot) => {
+                        if (snapshot.exists() && snapshot.data().status === 'Success') {
+                            const statusElem = document.getElementById('live-payment-status');
+                            statusElem.innerHTML = '<i class="fa-solid fa-circle-check"></i> Payment Successful! Redirecting...';
+                            statusElem.classList.replace('text-orange-600', 'text-green-600');
+                            statusElem.classList.remove('animate-pulse');
+                            
+                            localStorage.removeItem('bringo_cart');
+                            
+                            // ২ সেকেন্ড পর কাস্টমারকে অর্ডারের পেজে পাঠিয়ে দেওয়া হবে
+                            setTimeout(() => {
+                                window.location.href = 'order.html';
+                            }, 2000);
+                        }
+                    });
+                }
             } catch (error) {
                 alert("Error placing order: " + error.message);
                 btn.innerHTML = 'Confirm & Place Order';
