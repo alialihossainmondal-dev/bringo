@@ -2,271 +2,109 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bringo - Checkout</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body class="bg-gray-50 select-none pb-20">
-    <!-- Header -->
+<body class="bg-gray-50 pb-20">
+
     <div class="bg-orange-500 text-white p-4 sticky top-0 flex items-center shadow-md z-40">
-        <a href="cart.html" class="mr-4"><i class="fa-solid fa-arrow-left text-xl"></i></a>
+        <a href="cart.html" class="mr-4"><i class="fa-solid fa-arrow-left"></i></a>
         <h1 class="text-xl font-bold">Checkout</h1>
     </div>
 
     <div class="p-4 space-y-4">
-        
-        <!-- Promo Code Section -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            <h2 class="font-bold text-gray-800 mb-2 text-sm"><i class="fa-solid fa-tag text-orange-500 mr-1"></i> Apply Coupon</h2>
-            <div class="flex gap-2">
-                <input type="text" id="promo-code" placeholder="Enter code" class="flex-1 border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500 uppercase font-bold text-gray-700 tracking-wider">
-                <button id="apply-promo-btn" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow hover:bg-black transition">Apply</button>
-            </div>
-            <p id="promo-msg" class="text-[11px] font-bold mt-2 hidden"></p>
-        </div>
-
         <!-- Order Summary -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-yellow-400">
-            <div class="flex justify-between items-center mb-1 text-sm text-gray-500">
-                <span>Subtotal</span>
-                <span id="subtotal-amount" class="font-bold text-gray-700">₹0</span>
-            </div>
-            <div id="discount-row" class="flex justify-between items-center mb-2 text-sm text-green-600 font-bold hidden">
-                <span>Discount applied</span>
-                <span id="discount-amount">-₹0</span>
-            </div>
-            <hr class="my-2 border-dashed border-gray-200">
-            <div class="flex justify-between items-center">
-                <h2 class="font-bold text-gray-800">Total to Pay</h2>
-                <p id="pay-amount-top" class="text-2xl font-black text-orange-600">₹0</p>
-            </div>
-        </div>
-
-        <!-- Delivery Details -->
         <div class="bg-white p-4 rounded-xl shadow-sm">
-            <h2 class="font-bold text-gray-800 mb-3 text-sm"><i class="fa-solid fa-location-dot text-orange-500 mr-1"></i> Delivery Details</h2>
-            <textarea id="address" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500 bg-gray-50" rows="3" placeholder="Enter complete address"></textarea>
-            <input type="tel" id="phone" class="w-full border rounded-lg p-2 mt-2 text-sm focus:outline-none focus:border-orange-500 bg-gray-50" placeholder="Phone Number">
+            <h2 class="font-bold text-gray-800">Total to Pay: <span id="pay-amount" class="text-orange-600">₹0</span></h2>
         </div>
 
-        <!-- Order Notes -->
-        <div class="bg-white p-4 rounded-xl shadow-sm">
-            <h2 class="font-bold text-gray-800 mb-1 text-sm"><i class="fa-solid fa-clipboard-list text-orange-500 mr-1"></i> Order Notes</h2>
-            <p class="text-[10px] text-gray-500 mb-2">Write your preferred Size, Color, or any details (Optional)</p>
-            <textarea id="order-notes" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500 bg-gray-50" rows="2" placeholder="E.g., Shirt Size: L, Color: Black..."></textarea>
-        </div>
-
-        <!-- Payment Method -->
-        <div class="bg-white p-4 rounded-xl shadow-sm">
-            <h2 class="font-bold text-gray-800 mb-3 text-sm"><i class="fa-solid fa-wallet text-orange-500 mr-1"></i> Payment Method</h2>
-            <select id="payment-method" class="w-full border rounded-lg p-2 bg-gray-50 text-gray-800 focus:outline-none font-bold text-sm">
-                <option value="cod">Cash on Delivery (COD)</option>
-                <option value="prepaid">Prepaid (UPI QR)</option>
-            </select>
-            <p id="prepaid-warning" class="text-xs text-red-500 mt-2 font-bold hidden"><i class="fa-solid fa-circle-exclamation"></i> Some items in your cart are "Prepaid Only". COD is disabled.</p>
-        </div>
-
-        <button id="place-order-btn" class="w-full bg-orange-500 text-white font-bold py-3.5 rounded-xl shadow-lg mt-2 hover:bg-orange-600 transition-colors text-sm">
-            Confirm & Place Order
-        </button>
-
-        <!-- Dynamic QR Section (Hidden by default, shows after Place Order is clicked for prepaid) -->
-        <div id="qr-section" class="bg-white p-4 rounded-xl shadow-sm hidden text-center border border-orange-200 bg-orange-50 mt-4">
-            <h3 class="font-bold text-gray-800 mb-2 text-sm">Scan to Pay <span id="pay-amount-qr" class="text-orange-600 text-lg"></span></h3>
+        <!-- Master Code Section -->
+        <div id="master-code-box" class="bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-200">
+            <h2 class="font-bold text-blue-800 mb-2 text-sm">Prepaid Order?</h2>
+            <p class="text-xs text-blue-600 mb-3">Pay on WhatsApp to get your Master Code.</p>
             
-            <!-- UPI ID & Copy Box -->
-            <div class="bg-white border border-gray-300 rounded-lg p-2 mb-1 flex justify-between items-center max-w-[240px] mx-auto shadow-sm">
-                <span class="text-[12px] text-gray-500 font-bold truncate">UPI: <span class="text-gray-800 select-all">7908352815@fam</span></span>
-                <button id="copy-upi-btn" class="text-orange-500 hover:text-orange-700 transition px-2 py-1 bg-orange-50 rounded">
-                    <i class="fa-regular fa-copy"></i>
-                </button>
-            </div>
-            <p id="copy-msg" class="text-[10px] text-green-600 font-bold hidden mb-3">Copied to clipboard!</p>
+            <button id="wp-redirect-btn" class="w-full bg-[#25D366] text-white font-bold py-2 rounded-lg mb-3">
+                <i class="fa-brands fa-whatsapp"></i> Get Master Code
+            </button>
             
-            <img id="dynamic-qr" src="" alt="UPI QR" class="w-40 h-40 mx-auto border-2 border-yellow-400 rounded-lg mb-3 object-contain bg-white">
-            <p id="live-payment-status" class="text-sm font-bold text-orange-600 mt-2 animate-pulse">
-                <i class="fa-solid fa-spinner fa-spin"></i> Waiting for payment confirmation...
-            </p>
-            <p class="text-[11px] text-gray-500 mt-2">Do not close this page. It will redirect automatically after payment.</p>
+            <input type="text" id="master-code-input" class="w-full border rounded-lg p-2 text-sm text-center font-bold uppercase tracking-widest" placeholder="ENTER MASTER CODE HERE">
         </div>
+
+        <button id="place-order-btn" class="w-full bg-orange-500 text-white font-bold py-3 rounded-xl shadow-lg">Confirm Order</button>
     </div>
 
     <script type="module">
-        import { auth, db, doc, getDoc, setDoc, collection, onAuthStateChanged, query, where, getDocs, onSnapshot } from './common/firebase-config.js';
-        
+        import { auth, db, addDoc, collection, query, where, getDocs, doc, updateDoc } from './common/firebase-config.js';
+
         let cart = JSON.parse(localStorage.getItem('bringo_cart')) || [];
-        if(cart.length === 0) {
-            window.location.href = 'index.html';
-        }
+        let total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        document.getElementById('pay-amount').innerText = `₹${total}`;
 
-        let cartSubTotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-        let cartTotal = cartSubTotal;
-        let requiresPrepaid = cart.some(item => item.type === 'Prepaid');
-        
-        // Promo Variables
-        let appliedDiscount = 0;
-        let appliedPromoCode = null;
-
-        document.getElementById('subtotal-amount').innerText = `₹${cartSubTotal}`;
-        document.getElementById('pay-amount-top').innerText = `₹${cartTotal}`;
-        document.getElementById('pay-amount-qr').innerText = `₹${cartTotal}`;
-
-        // UPI Copy Logic
-        document.getElementById('copy-upi-btn').addEventListener('click', () => {
-            const upiIdText = "7908352815@fam";
-            navigator.clipboard.writeText(upiIdText).then(() => {
-                const copyMsg = document.getElementById('copy-msg');
-                copyMsg.classList.remove('hidden');
-                setTimeout(() => {
-                    copyMsg.classList.add('hidden');
-                }, 2000);
-            });
+        // WhatsApp Redirect
+        document.getElementById('wp-redirect-btn').addEventListener('click', () => {
+            let items = cart.map(i => `${i.title || i.name} (x${i.qty})`).join(', ');
+            let msg = `Hello Budget Bazar!\nI want to place an order.\n\n*Products:* ${items}\n*Total:* ₹${total}\n\nPlease provide me the Master Code for checkout.`;
+            window.open(`https://wa.me/917872075844?text=${encodeURIComponent(msg)}`, '_blank');
         });
 
-        // Dynamic Promo Code Logic
-        document.getElementById('apply-promo-btn').addEventListener('click', async () => {
-            const codeInput = document.getElementById('promo-code').value.trim().toUpperCase();
-            const msgBox = document.getElementById('promo-msg');
-            const btn = document.getElementById('apply-promo-btn');
-
-            if(!codeInput) return;
-
-            if(appliedPromoCode) {
-                msgBox.innerText = "A coupon is already applied!";
-                msgBox.className = "text-[11px] font-bold mt-2 text-red-500 block";
-                return;
-            }
-
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-            btn.disabled = true;
-
-            try {
-                const q = query(collection(db, "coupons"), where("code", "==", codeInput));
-                const querySnapshot = await getDocs(q);
-
-                if(!querySnapshot.empty) {
-                    const couponData = querySnapshot.docs[0].data();
-                    
-                    if(cartSubTotal >= couponData.min_order_value) {
-                        appliedDiscount = couponData.discount_amount;
-                        appliedPromoCode = codeInput;
-                        cartTotal = cartSubTotal - appliedDiscount;
-
-                        document.getElementById('discount-row').classList.remove('hidden');
-                        document.getElementById('discount-amount').innerText = `-₹${appliedDiscount}`;
-                        document.getElementById('pay-amount-top').innerText = `₹${cartTotal}`;
-                        document.getElementById('pay-amount-qr').innerText = `₹${cartTotal}`;
-
-                        msgBox.innerText = `Yay! ₹${appliedDiscount} Discount applied successfully. 🎉`;
-                        msgBox.className = "text-[11px] font-bold mt-2 text-green-600 block";
-                        
-                        btn.innerText = "Applied";
-                        btn.classList.replace('bg-gray-800', 'bg-green-600');
-                        document.getElementById('promo-code').disabled = true;
-                    } else {
-                        msgBox.innerText = `Order value must be at least ₹${couponData.min_order_value} to use this coupon.`;
-                        msgBox.className = "text-[11px] font-bold mt-2 text-red-500 block";
-                        btn.innerText = "Apply";
-                        btn.disabled = false;
-                    }
-                } else {
-                    msgBox.innerText = "Invalid or expired promo code.";
-                    msgBox.className = "text-[11px] font-bold mt-2 text-red-500 block";
-                    btn.innerText = "Apply";
-                    btn.disabled = false;
-                }
-            } catch(error) {
-                msgBox.innerText = "Error checking code. Please try again.";
-                msgBox.className = "text-[11px] font-bold mt-2 text-red-500 block";
-                btn.innerText = "Apply";
-                btn.disabled = false;
-            }
-        });
-
-        // Payment Method Logic
-        const paymentSelect = document.getElementById('payment-method');
-        const qrSection = document.getElementById('qr-section');
-
-        if(requiresPrepaid) {
-            paymentSelect.value = 'prepaid';
-            paymentSelect.disabled = true;
-            document.getElementById('prepaid-warning').classList.remove('hidden');
-        }
-
-        onAuthStateChanged(auth, (user) => {
-            if (!user) {
-                alert("Please login to place an order!");
-                window.location.href = 'login.html';
-            }
-        });
-
-        // Place Order Logic 
+        // Place Order Logic
         document.getElementById('place-order-btn').addEventListener('click', async () => {
-            const address = document.getElementById('address').value;
-            const phone = document.getElementById('phone').value;
-            const notes = document.getElementById('order-notes').value;
-            const method = paymentSelect.value;
+            const inputCode = document.getElementById('master-code-input').value.trim().toUpperCase();
             const btn = document.getElementById('place-order-btn');
-
-            if(!address || !phone) return alert('Enter complete address and phone number');
+            
+            if(!inputCode) return alert("Please enter the Master Code!");
 
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
             btn.disabled = true;
 
-            const orderId = "BRG" + Date.now() + Math.floor(Math.random() * 100); 
-
             try {
-                await setDoc(doc(db, 'orders', orderId), {
-                    order_id: orderId,
-                    user_id: auth.currentUser.uid,
-                    subtotal: cartSubTotal,
-                    discount_amount: appliedDiscount,
-                    promo_code_used: appliedPromoCode || 'None',
-                    total_amount: cartTotal,
-                    delivery_address: address,
-                    phone_number: phone,
-                    customer_notes: notes || 'No extra notes provided',
-                    payment_method: method,
-                    status: method === 'prepaid' ? 'Pending Payment' : 'Placed', 
-                    created_at: new Date(),
-                    items: cart
-                });
-                
-                if (method === 'cod') {
-                    localStorage.removeItem('bringo_cart');
-                    alert('Order Placed Successfully!');
-                    window.location.href = 'order.html';
-                } else {
-                    // UPDATE: এখানে আপনার FamPay আইডি আপডেট করা হয়েছে
-                    const upiId = "7908352815@fam"; 
-                    const upiLink = `upi://pay?pa=${upiId}&pn=Bringo&am=${cartTotal}&tr=${orderId}`;
-                    
-                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(upiLink)}`;
-                    
-                    document.getElementById('dynamic-qr').src = qrUrl;
-                    
-                    btn.classList.add('hidden');
-                    qrSection.classList.remove('hidden');
+                // ১. ডাটাবেস থেকে কোডটি খুঁজুন
+                const q = query(collection(db, "master_codes"), where("code", "==", inputCode));
+                const querySnapshot = await getDocs(q);
 
-                    onSnapshot(doc(db, 'orders', orderId), (snapshot) => {
-                        if (snapshot.exists() && snapshot.data().status === 'Success') {
-                            const statusElem = document.getElementById('live-payment-status');
-                            statusElem.innerHTML = '<i class="fa-solid fa-circle-check"></i> Payment Successful! Redirecting...';
-                            statusElem.classList.replace('text-orange-600', 'text-green-600');
-                            statusElem.classList.remove('animate-pulse');
-                            
-                            localStorage.removeItem('bringo_cart');
-                            
-                            setTimeout(() => {
-                                window.location.href = 'order.html';
-                            }, 2000);
-                        }
-                    });
+                if (querySnapshot.empty) {
+                    btn.innerHTML = 'Confirm Order';
+                    btn.disabled = false;
+                    return alert("Invalid Master Code! Please check again.");
                 }
-            } catch (error) {
-                alert("Error placing order: " + error.message);
-                btn.innerHTML = 'Confirm & Place Order';
+
+                const codeDoc = querySnapshot.docs[0];
+                const codeData = codeDoc.data();
+
+                // ২. চেক করুন কোডটি আগে ব্যবহার হয়েছে কি না
+                if (codeData.is_used) {
+                    btn.innerHTML = 'Confirm Order';
+                    btn.disabled = false;
+                    return alert("This Master Code has already been used!");
+                }
+
+                // ৩. কোড সঠিক হলে অর্ডার প্লেস করুন
+                await addDoc(collection(db, 'orders'), {
+                    user_id: auth.currentUser.uid,
+                    total_amount: total,
+                    items: cart,
+                    payment_method: 'prepaid',
+                    used_master_code: inputCode,
+                    status: 'Placed',
+                    created_at: new Date()
+                });
+
+                // ৪. অর্ডার প্লেস হয়ে গেলে কোডটিকে 'Used' হিসেবে মার্ক করুন
+                await updateDoc(doc(db, "master_codes", codeDoc.id), {
+                    is_used: true,
+                    used_by: auth.currentUser.uid,
+                    used_at: new Date()
+                });
+
+                localStorage.removeItem('bringo_cart');
+                alert("Order Placed Successfully!");
+                window.location.href = 'order.html';
+
+            } catch (e) {
+                alert("Error: " + e.message);
+                btn.innerHTML = 'Confirm Order';
                 btn.disabled = false;
             }
         });
