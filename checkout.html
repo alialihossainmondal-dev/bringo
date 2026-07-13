@@ -188,13 +188,22 @@
             else masterCodeSection.classList.add('hidden');
         });
 
-        // WhatsApp Redirect
+        // UPDATED: Professional WhatsApp Redirect
         document.getElementById('wp-redirect-btn').addEventListener('click', () => {
-            let itemsList = cart.map((item, index) => `${index + 1}. ${item.title || item.name || 'Product'} (x${item.qty})`).join('\n');
-            let userName = currentUser?.displayName || "Customer";
-            let userEmail = currentUser?.email || "No Email Provided";
             
-            let wpMessage = `Hello Budget Bazar!\nI want to place an order.\n\n*My Details:*\nName: ${userName}\nEmail: ${userEmail}\n\n*Products:*\n${itemsList}\n\n*Total Amount: ₹${cartTotal}*\n\nPlease provide me the Master Code for checkout.`;
+            // কাস্টমারের বর্তমান লেখা অ্যাড্রেস ও ফোন নম্বর নেওয়া
+            const customerAddress = document.getElementById('address').value.trim() || 'Not filled yet';
+            const customerPhone = document.getElementById('phone').value.trim() || 'Not filled yet';
+            let userName = currentUser?.displayName || "Customer";
+
+            // প্রোডাক্টের সুন্দর লিস্ট তৈরি
+            let itemsList = cart.map((item, index) => `🛒 *${item.title || item.name || 'Product'}*\n      Qty: ${item.qty}   |   Price: ₹${item.price * item.qty}`).join('\n\n');
+            
+            // ডিসকাউন্ট থাকলে মেসেজে দেখাবে
+            let discountText = appliedDiscount > 0 ? `\n🎁 *Discount Applied:* -₹${appliedDiscount}` : '';
+
+            // একদম প্রফেশনাল মেসেজ ফরম্যাট
+            let wpMessage = `🛍️ *NEW ORDER PAYMENT REQUEST* 🛍️\n\nHello Bringo Team, I want to pay for my prepaid order. Please check the details below and share the *Master Code*.\n\n👤 *CUSTOMER DETAILS:*\n*Name:* ${userName}\n*Phone:* ${customerPhone}\n*Address:* ${customerAddress}\n\n📦 *ORDER DETAILS:*\n${itemsList}\n\n💳 *BILLING SUMMARY:*\n*Subtotal:* ₹${cartSubTotal}${discountText}\n🧾 *TOTAL TO PAY: ₹${cartTotal}*\n\nWaiting for your reply & Master Code! ⏳`;
             
             let wpNumber = "917872075844"; 
             let wpUrl = `https://wa.me/${wpNumber}?text=${encodeURIComponent(wpMessage)}`;
@@ -237,7 +246,7 @@
                     const codeDoc = querySnapshot.docs[0];
                     const codeData = codeDoc.data();
 
-                    // ২. চেক করুন কোডটি আগে ব্যবহার হয়েছে কি না
+                    // ২. চেক করুন কোডটি আগে ব্যবহার হয়েছে কি না
                     if (codeData.is_used) {
                         btn.innerHTML = 'Confirm & Place Order';
                         btn.disabled = false;
