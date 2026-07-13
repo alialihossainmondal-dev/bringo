@@ -51,6 +51,11 @@
         </div>
     </div>
 
+    <!-- NEW: Floating Instagram Help Button -->
+    <a href="https://www.instagram.com/shopbringo?igsh=MWU2c2xjazJteDc3Yg==" target="_blank" class="fixed bottom-20 right-4 w-12 h-12 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg z-50 hover:scale-110 transition-transform border-2 border-white">
+        <i class="fa-brands fa-instagram text-white text-2xl"></i>
+    </a>
+
     <!-- Bottom Navigation -->
     <div class="fixed bottom-0 w-full bg-white border-t border-gray-100 flex justify-around items-center h-16 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <a href="index.html" class="flex flex-col items-center text-orange-500"><i class="fa-solid fa-house text-xl"></i></a>
@@ -74,7 +79,6 @@
             }
         });
 
-        // Update Cart Badge
         function updateCartBadge() {
             let cart = JSON.parse(localStorage.getItem('bringo_cart')) || [];
             const badge = document.getElementById('cart-badge');
@@ -137,7 +141,6 @@
                 const data = doc.data();
                 const badge = data.payment_type === 'Prepaid' ? '<span class="absolute top-2 left-2 bg-yellow-400 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-md shadow">Prepaid Only</span>' : '';
                 
-                // Escape quotes for safe HTML insertion
                 const safeName = data.name.replace(/'/g, "\\'");
                 
                 list.innerHTML += `
@@ -155,7 +158,6 @@
             });
         }
 
-        // NEW: Real Add To Cart Function
         window.addToCart = (id, name, price, image, type) => {
             let cart = JSON.parse(localStorage.getItem('bringo_cart')) || [];
             let existing = cart.find(item => item.id === id);
@@ -169,7 +171,6 @@
             localStorage.setItem('bringo_cart', JSON.stringify(cart));
             updateCartBadge();
             
-            // Show a quick visual feedback instead of annoying alert
             const btn = event.currentTarget;
             const originalHTML = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-check"></i> Added';
