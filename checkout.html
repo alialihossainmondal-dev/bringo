@@ -137,7 +137,67 @@
                 alert("Error placing order: " + error.message);
                 btn.innerHTML = 'Confirm & Place Order';
                 btn.disabled = false;
+           // Promo Code Logic (Dynamic from Database)
+        document.getElementById('apply-promo-btn').addEventListener('click', async () => {
+            const codeInput = document.getElementById('promo-code').value.trim().toUpperCase();
+            const msgBox = document.getElementById('promo-msg');
+            const btn = document.getElementById('apply-promo-btn');
+
+            if(!codeInput) return;
+
+            if(appliedPromoCode) {
+                msgBox.innerText = "A coupon is already applied!";
+                msgBox.className = "text-[11px] font-bold mt-2 text-red-500 block";
+                return;
             }
+
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            try {
+                // ডাটাবেস থেকে কুপনটি খুঁজবে
+                const q = query(collection(db, "coupons"), where("code", "==", codeInput));
+                const querySnapshot = await getDocs(q);
+
+                if(!querySnapshot.empty) {
+                    const couponData = querySnapshot.docs[0].data();
+                    
+                    // মিনিমাম অর্ডারের শর্ত পূরণ হয়েছে কিনা চেক করবে
+                    if(cartSubTotal >= couponData.min_order_value) {
+                        appliedDiscount = couponData.discount_amount;
+                        appliedPromoCode = codeInput;
+                        cartTotal = cartSubTotal - appliedDiscount;
+
+                        // UI আপডেট করা
+                        document.getElementById('discount-row').classList.remove('hidden');
+                        document.getElementById('discount-amount').innerText = `-₹${appliedDiscount}`;
+                        document.getElementById('pay-amount-top').innerText = `₹${cartTotal}`;
+                        document.getElementById('pay-amount-qr').innerText = `₹${cartTotal}`;
+
+                        msgBox.innerText = `Yay! ₹${appliedDiscount} Discount applied successfully. 🎉`;
+                        msgBox.className = "text-[11px] font-bold mt-2 text-green-600 block";
+                        
+                        btn.innerText = "Applied";
+                        btn.classList.replace('bg-gray-800', 'bg-green-600');
+                        document.getElementById('promo-code').disabled = true;
+                    } else {
+                        msgBox.innerText = `Order value must be at least ₹${couponData.min_order_value} to use this coupon.`;
+                        msgBox.className = "text-[11px] font-bold mt-2 text-red-500 block";
+                        btn.innerText = "Apply";
+                        btn.disabled = false;
+                    }
+                } else {
+                    msgBox.innerText = "Invalid or expired promo code.";
+                    msgBox.className = "text-[11px] font-bold mt-2 text-red-500 block";
+                    btn.innerText = "Apply";
+                    btn.disabled = false;
+                }
+            } catch(error) {
+                msgBox.innerText = "Error checking code. Try again.";
+                msgBox.className = "text-[11px] font-bold mt-2 text-red-500 block";
+                btn.innerText = "Apply";
+                btn.disabled = false;
+          }
         });
     </script>
 </body>
