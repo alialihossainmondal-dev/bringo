@@ -26,9 +26,8 @@
         </div>
     </div>
 
-    <!-- NEW: Auto Image Slider (Banner) -->
+    <!-- Banner Slider -->
     <div class="p-4 pb-0">
-        <!-- Note: Change aspect-[16/9] to aspect-[9/16] if you want vertical tall banners -->
         <div id="banner-slider" class="relative w-full aspect-[16/9] bg-gray-200 rounded-xl overflow-hidden shadow-sm">
             <div class="absolute inset-0 flex items-center justify-center">
                 <i class="fa-solid fa-spinner fa-spin text-orange-500 text-2xl"></i>
@@ -39,18 +38,13 @@
     <div class="p-4">
         <!-- Categories -->
         <h2 class="font-bold text-gray-800 mb-3 uppercase text-sm tracking-wide">Categories</h2>
-        <div class="flex overflow-x-auto gap-4 no-scrollbar mb-6 pb-2" id="category-list">
-            <div class="text-center min-w-[70px] animate-pulse">
-                <div class="w-16 h-16 bg-gray-200 rounded-full mx-auto mb-1"></div>
-            </div>
-        </div>
+        <div class="flex overflow-x-auto gap-4 no-scrollbar mb-6 pb-2" id="category-list"></div>
 
         <!-- Featured Products -->
         <div class="flex justify-between items-center mb-3">
             <h2 class="font-bold text-gray-800 uppercase text-sm tracking-wide">Featured Items</h2>
             <a href="product.html" class="text-xs text-orange-500 font-bold">See All</a>
         </div>
-        
         <div class="grid grid-cols-2 gap-3" id="product-list">
             <div class="bg-white rounded-xl shadow-sm p-3 animate-pulse h-48"></div>
             <div class="bg-white rounded-xl shadow-sm p-3 animate-pulse h-48"></div>
@@ -70,7 +64,6 @@
 
     <script type="module">
         import { db, collection, getDocs, auth, onAuthStateChanged } from './common/firebase-config.js';
-        import './common/security.js';
 
         onAuthStateChanged(auth, (user) => {
             const pfpLink = document.getElementById('user-pfp-link');
@@ -81,25 +74,33 @@
             }
         });
 
-        // Load Auto Slider Banners
+        // Update Cart Badge
+        function updateCartBadge() {
+            let cart = JSON.parse(localStorage.getItem('bringo_cart')) || [];
+            const badge = document.getElementById('cart-badge');
+            if(cart.length > 0) {
+                badge.classList.remove('hidden');
+                badge.innerText = cart.length;
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+        updateCartBadge();
+
         async function loadBanners() {
             const slider = document.getElementById('banner-slider');
             const snap = await getDocs(collection(db, "banners"));
             let bannersHTML = '';
             let count = 0;
-            
             snap.forEach(doc => {
                 let hiddenClass = count === 0 ? 'opacity-100' : 'opacity-0';
                 bannersHTML += `<img src="${doc.data().image_url}" class="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${hiddenClass} banner-slide">`;
                 count++;
             });
-
             if(count > 0) {
                 slider.innerHTML = bannersHTML;
                 let current = 0;
                 const slides = document.querySelectorAll('.banner-slide');
-                
-                // 3 সেকেন্ড পর পর স্লাইড পরিবর্তন
                 if(slides.length > 1) {
                     setInterval(() => {
                         slides[current].classList.remove('opacity-100');
@@ -110,7 +111,7 @@
                     }, 3000); 
                 }
             } else {
-                slider.innerHTML = `<div class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm font-bold bg-gray-100">No Banners Added</div>`;
+                slider.innerHTML = `<div class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm font-bold bg-gray-100">No Banners</div>`;
             }
         }
 
@@ -134,7 +135,11 @@
             list.innerHTML = '';
             snap.forEach((doc) => {
                 const data = doc.data();
-                const badge = data.payment_type === 'Prepaid' ? '<span class="absolute top-2 left-2 bg-yellow-400 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-md">Prepaid Only</span>' : '';
+                const badge = data.payment_type === 'Prepaid' ? '<span class="absolute top-2 left-2 bg-yellow-400 text-gray-800 text-[10px] font-bold px-2 py-0.5 rounded-md shadow">Prepaid Only</span>' : '';
+                
+                // Escape quotes for safe HTML insertion
+                const safeName = data.name.replace(/'/g, "\\'");
+                
                 list.innerHTML += `
                     <a href="product_detail.html?id=${doc.id}" class="bg-white rounded-xl shadow-sm p-3 relative flex flex-col justify-between block hover:shadow-md transition">
                         ${badge}
@@ -143,17 +148,38 @@
                             <h3 class="text-sm font-bold text-gray-800 leading-tight truncate">${data.name}</h3>
                             <p class="text-orange-600 font-bold text-sm mt-1">₹${data.price}</p>
                         </div>
-                        <button onclick="event.preventDefault(); window.addToCart('${doc.id}')" class="mt-2 w-full bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white transition rounded-lg py-1.5 text-sm font-bold flex justify-center items-center gap-2">
+                        <button onclick="event.preventDefault(); window.addToCart('${doc.id}', '${safeName}', ${data.price}, '${data.image_url}', '${data.payment_type}')" class="mt-2 w-full bg-orange-100 text-orange-600 hover:bg-orange-500 hover:text-white transition rounded-lg py-1.5 text-sm font-bold flex justify-center items-center gap-2">
                             <i class="fa-solid fa-plus"></i> Add
                         </button>
                     </a>`;
             });
         }
 
-        window.addToCart = (id) => {
-            alert('Added to cart!');
-            document.getElementById('cart-badge').classList.remove('hidden');
-            document.getElementById('cart-badge').innerText = '1';
+        // NEW: Real Add To Cart Function
+        window.addToCart = (id, name, price, image, type) => {
+            let cart = JSON.parse(localStorage.getItem('bringo_cart')) || [];
+            let existing = cart.find(item => item.id === id);
+            
+            if(existing) {
+                existing.qty += 1;
+            } else {
+                cart.push({ id, name, price, image, type, qty: 1 });
+            }
+            
+            localStorage.setItem('bringo_cart', JSON.stringify(cart));
+            updateCartBadge();
+            
+            // Show a quick visual feedback instead of annoying alert
+            const btn = event.currentTarget;
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-check"></i> Added';
+            btn.classList.replace('bg-orange-100', 'bg-green-500');
+            btn.classList.replace('text-orange-600', 'text-white');
+            setTimeout(() => {
+                btn.innerHTML = originalHTML;
+                btn.classList.replace('bg-green-500', 'bg-orange-100');
+                btn.classList.replace('text-white', 'text-orange-600');
+            }, 1000);
         };
 
         loadBanners();
