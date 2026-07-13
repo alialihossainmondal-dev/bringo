@@ -14,42 +14,93 @@
     </div>
 
     <div class="p-4 space-y-3" id="cart-items">
-        <div class="bg-white p-3 rounded-xl shadow-sm flex items-center gap-3">
-            <img src="https://via.placeholder.com/80" class="w-16 h-16 object-cover rounded-lg bg-gray-100">
-            <div class="flex-1">
-                <h3 class="text-sm font-bold text-gray-800">Premium Wireless Headphones</h3>
-                <p class="text-orange-600 font-bold text-sm">₹1500</p>
-                <div class="flex items-center gap-3 mt-2">
-                    <button class="w-6 h-6 bg-gray-100 rounded-full text-gray-600 hover:bg-orange-100"><i class="fa-solid fa-minus text-xs"></i></button>
-                    <span class="text-sm font-bold">1</span>
-                    <button class="w-6 h-6 bg-gray-100 rounded-full text-gray-600 hover:bg-orange-100"><i class="fa-solid fa-plus text-xs"></i></button>
-                </div>
-            </div>
-            <button class="text-red-400 hover:text-red-600 p-2"><i class="fa-solid fa-trash"></i></button>
-        </div>
+        <!-- Cart items will be loaded here dynamically -->
     </div>
 
+    <!-- Checkout Footer -->
     <div class="fixed bottom-0 w-full bg-white border-t p-4 rounded-t-2xl shadow-[0_-10px_15px_-3px_rgba(0,0,0,0.05)] z-50">
         <div class="flex justify-between items-center mb-3">
             <span class="text-gray-500 text-sm font-bold">Total Amount</span>
-            <span class="text-xl font-bold text-gray-800">₹1500</span>
+            <span class="text-xl font-bold text-gray-800" id="cart-total">₹0</span>
         </div>
-        <a href="checkout.html" class="block w-full bg-yellow-400 text-orange-900 text-center font-bold py-3 rounded-xl shadow hover:bg-yellow-500">
+        <button id="checkout-btn" class="block w-full bg-yellow-400 text-orange-900 text-center font-bold py-3 rounded-xl shadow hover:bg-yellow-500">
             Proceed to Checkout
-        </a>
+        </button>
     </div>
 
     <script type="module">
         import { auth, onAuthStateChanged } from './common/firebase-config.js';
-        import './common/security.js';
 
-        // NEW: Force Login Check
         onAuthStateChanged(auth, (user) => {
             if (!user) {
                 alert("Please login to view your cart!");
                 window.location.href = 'login.html';
             }
         });
+
+        function renderCart() {
+            const list = document.getElementById('cart-items');
+            const totalEl = document.getElementById('cart-total');
+            let cart = JSON.parse(localStorage.getItem('bringo_cart')) || [];
+            
+            list.innerHTML = '';
+            let totalAmount = 0;
+
+            if (cart.length === 0) {
+                list.innerHTML = `<div class="text-center text-gray-400 mt-10"><i class="fa-solid fa-cart-shopping text-4xl mb-3"></i><p>Your cart is empty.</p></div>`;
+                totalEl.innerText = '₹0';
+                document.getElementById('checkout-btn').classList.add('opacity-50', 'pointer-events-none');
+                return;
+            }
+
+            document.getElementById('checkout-btn').classList.remove('opacity-50', 'pointer-events-none');
+
+            cart.forEach((item, index) => {
+                totalAmount += (item.price * item.qty);
+                list.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl shadow-sm flex items-center gap-3">
+                        <img src="${item.image}" class="w-16 h-16 object-cover rounded-lg bg-gray-100 border">
+                        <div class="flex-1 overflow-hidden">
+                            <h3 class="text-sm font-bold text-gray-800 truncate">${item.name}</h3>
+                            <p class="text-orange-600 font-bold text-sm">₹${item.price}</p>
+                            <div class="flex items-center gap-3 mt-2">
+                                <button onclick="changeQty('${item.id}', -1)" class="w-6 h-6 bg-gray-100 rounded-full text-gray-600 hover:bg-orange-100"><i class="fa-solid fa-minus text-xs"></i></button>
+                                <span class="text-sm font-bold">${item.qty}</span>
+                                <button onclick="changeQty('${item.id}', 1)" class="w-6 h-6 bg-gray-100 rounded-full text-gray-600 hover:bg-orange-100"><i class="fa-solid fa-plus text-xs"></i></button>
+                            </div>
+                        </div>
+                        <button onclick="removeItem('${item.id}')" class="text-red-400 hover:text-red-600 p-2"><i class="fa-solid fa-trash"></i></button>
+                    </div>`;
+            });
+
+            totalEl.innerText = `₹${totalAmount}`;
+        }
+
+        window.changeQty = (id, change) => {
+            let cart = JSON.parse(localStorage.getItem('bringo_cart')) || [];
+            let item = cart.find(i => i.id === id);
+            if(item) {
+                item.qty += change;
+                if(item.qty <= 0) {
+                    cart = cart.filter(i => i.id !== id);
+                }
+                localStorage.setItem('bringo_cart', JSON.stringify(cart));
+                renderCart();
+            }
+        };
+
+        window.removeItem = (id) => {
+            let cart = JSON.parse(localStorage.getItem('bringo_cart')) || [];
+            cart = cart.filter(i => i.id !== id);
+            localStorage.setItem('bringo_cart', JSON.stringify(cart));
+            renderCart();
+        };
+
+        document.getElementById('checkout-btn').addEventListener('click', () => {
+            window.location.href = 'checkout.html';
+        });
+
+        renderCart();
     </script>
 </body>
 </html>
