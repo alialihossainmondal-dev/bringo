@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<base href="/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page not found | Bringo</title>
+<meta name="description" content="This page could not be found.">
+<meta name="theme-color" content="#14307e">
+<meta name="robots" content="noindex">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Bringo">
+<meta property="og:title" content="Page not found | Bringo">
+<meta property="og:description" content="This page could not be found.">
+<meta property="og:image" content="https://bringo-steel.vercel.app/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common/theme.css">
+</head>
+<body>
+<main id="main"><div class="wrap wrap-narrow"><div id="nf" style="padding-top:40px"></div></div></main>
+<script type="module">
+import { mountChrome, emptyState } from './common/app.js';
+mountChrome({ variant: 'inner', title: 'Not found', active: '' }).then(() => {});
+document.getElementById('nf').innerHTML = emptyState({ ic: 'search', title: 'We could not find that page', text: 'The link may be old or mistyped. Head back to the shop to keep browsing.', href: 'index.html', cta: 'Go to the shop' });
+</script>
+</body>
+</html>

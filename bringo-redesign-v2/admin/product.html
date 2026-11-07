@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="robots" content="noindex, nofollow">
+    <script>document.documentElement.style.visibility='hidden'</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Admin - Products</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 select-none pb-20">
+    <div class="bg-orange-600 text-white p-4 sticky top-0 flex items-center shadow-md z-40">
+        <a href="index.html" class="mr-4"><i class="fa-solid fa-arrow-left text-xl"></i></a>
+        <h1 class="text-xl font-bold">Manage Products</h1>
+    </div>
+
+    <div class="p-4">
+        <!-- Add Product Form -->
+        <div class="bg-white p-4 rounded-xl shadow-sm mb-6">
+            <h2 class="font-bold text-gray-800 mb-3 uppercase text-sm"><i class="fa-solid fa-plus text-orange-500 mr-1"></i> Add Product</h2>
+            
+            <input type="text" id="p-name" placeholder="Product Name" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500 mb-3">
+            
+            <select id="p-category" class="w-full border rounded-lg p-2 text-sm text-gray-700 bg-gray-50 mb-3 focus:outline-none focus:border-orange-500 font-bold">
+                <option value="">Select Category...</option>
+                <!-- Categories will load here dynamically -->
+            </select>
+
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <input type="number" id="p-price" placeholder="Price (₹)" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500">
+                <input type="number" id="p-stock" placeholder="Stock Qty" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-3">
+                <input type="number" id="p-mrp" placeholder="MRP / old price (₹) optional" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500">
+                <input type="text" id="p-brand" placeholder="Brand (optional)" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500">
+            </div>
+
+            <select id="p-pay-type" class="w-full border rounded-lg p-2 text-sm text-gray-700 bg-white mb-3 focus:outline-none focus:border-orange-500">
+                <option value="Both">Payment: Both (COD & Prepaid)</option>
+                <option value="Prepaid">Prepaid Only (Requires QR scan)</option>
+                <option value="COD">COD Only</option>
+            </select>
+
+            <textarea id="p-desc" placeholder="Product Description" rows="2" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500 mb-3"></textarea>
+            <textarea id="p-high" placeholder="Highlights (one per line), e.g.&#10;Keeps drinks cold for 12 hours&#10;Leak-proof lid" rows="3" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500" style="margin-bottom:12px"></textarea>
+            <textarea id="p-specs" placeholder="Specifications (one per line as Name: Value), e.g.&#10;Material: Stainless steel&#10;Capacity: 1 L" rows="3" class="w-full border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500" style="margin-bottom:12px"></textarea>
+            
+            <!-- NEW: Multiple File Input -->
+            <input type="file" id="p-image" accept="image/*" multiple class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-orange-50 file:text-orange-700 mb-1">
+            <p class="text-[10px] text-gray-400 mb-3 ml-1 font-bold"><i class="fa-solid fa-circle-info mr-1"></i>Select Minimum 1 & Maximum 5 images.</p>
+            
+            <p id="edit-note" class="hidden text-xs font-bold text-blue-600 mb-2"><i class="fa-solid fa-pen mr-1"></i>Editing a product. Leave the image box empty to keep its current photos. <button type="button" id="cancel-edit" class="underline ml-1">Cancel edit</button></p>
+            <button id="add-btn" class="w-full bg-orange-500 text-white font-bold py-2 rounded-lg text-sm shadow hover:bg-orange-600">Save Product</button>
+        </div>
+
+        <h2 class="font-bold text-gray-800 mb-3 uppercase text-sm">Inventory</h2>
+        <div id="product-list" class="space-y-3"></div>
+    </div>
+
+    <script type="module" src="guard.js"></script>
+    <script type="module">
+        import { db, collection, addDoc, getDocs, doc, deleteDoc, updateDoc } from '../common/firebase-config.js';
+
+        // আপনার ImgBB API Key এখানে দিন
+        const IMGBB_API_KEY = "84d1381ec359c2c06ec716c61534f33e";
+
+        const loadCategories = async () => {
+            const catSelect = document.getElementById('p-category');
+            const querySnapshot = await getDocs(collection(db, "categories"));
+            querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                catSelect.innerHTML += `<option value="${data.name}">${data.name}</option>`;
+            });
+        };
+
+        const prods = {};
+        let editingId = null;
+        const loadProducts = async () => {
+            const list = document.getElementById('product-list');
+            list.innerHTML = '';
+            const querySnapshot = await getDocs(collection(db, "products"));
+            querySnapshot.forEach((docSnap) => {
+                const data = docSnap.data();
+                prods[docSnap.id] = data;
+                const badgeColor = data.payment_type === 'Prepaid' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600';
+                
+                // Show how many images this product has
+                const imageCount = data.images ? data.images.length : 1;
+
+                list.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl shadow-sm flex items-start gap-3 border-l-4 border-orange-500 relative">
+                        <div class="relative">
+                            <img src="${data.image_url}" class="w-16 h-16 rounded-lg object-cover bg-gray-50 border">
+                            <span class="absolute -bottom-2 -right-2 bg-orange-100 text-orange-600 text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm border border-orange-200">
+                                <i class="fa-regular fa-images"></i> ${imageCount}
+                            </span>
+                        </div>
+                        <div class="flex-1 overflow-hidden ml-2">
+                            <span class="text-[10px] font-bold text-orange-500 uppercase tracking-wider">${data.category || 'Uncategorized'}</span>
+                            <h3 class="font-bold text-gray-800 text-sm leading-tight truncate">${data.name}</h3>
+                            <p class="text-orange-600 font-bold text-sm">₹${data.price} <span class="text-xs text-gray-400 font-normal ml-2">Stock: ${data.stock}</span></p>
+                            <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold ${badgeColor}">${data.payment_type}</span>
+                        </div>
+                        <div class="absolute top-2 right-2 flex">
+                            <button onclick="editProd('${docSnap.id}')" class="text-blue-400 hover:text-blue-600 p-2"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteProd('${docSnap.id}')" class="text-red-400 hover:text-red-600 p-2"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>`;
+            });
+        };
+
+        const $v = (id) => document.getElementById(id);
+        const resetForm = () => {
+            ['p-name','p-category','p-price','p-stock','p-mrp','p-brand','p-desc','p-high','p-specs','p-image'].forEach(i => { $v(i).value = ''; });
+            $v('p-pay-type').value = 'Both';
+            editingId = null; $v('edit-note').classList.add('hidden'); $v('add-btn').innerHTML = 'Save Product';
+        };
+        window.editProd = (id) => {
+            const d = prods[id]; if (!d) return;
+            editingId = id;
+            $v('p-name').value = d.name || ''; $v('p-category').value = d.category || '';
+            $v('p-price').value = d.price ?? ''; $v('p-stock').value = d.stock ?? ''; $v('p-mrp').value = d.mrp ?? '';
+            $v('p-brand').value = d.brand || ''; $v('p-pay-type').value = d.payment_type || 'Both'; $v('p-desc').value = d.description || '';
+            $v('p-high').value = Array.isArray(d.highlights) ? d.highlights.join('\n') : (d.highlights || '');
+            $v('p-specs').value = Array.isArray(d.specs) ? d.specs.map(x => (x.k || x.key) + ': ' + (x.v || x.value)).join('\n') : (d.specs || '');
+            $v('p-image').value = '';
+            $v('edit-note').classList.remove('hidden'); $v('add-btn').innerHTML = 'Update Product';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+        $v('cancel-edit').addEventListener('click', resetForm);
+
+        $v('add-btn').addEventListener('click', async () => {
+            const name = $v('p-name').value.trim();
+            const category = $v('p-category').value;
+            const price = $v('p-price').value;
+            const stock = $v('p-stock').value;
+            const mrp = $v('p-mrp').value;
+            const type = $v('p-pay-type').value;
+            const files = $v('p-image').files;
+            const btn = $v('add-btn');
+
+            if(!name || !category || !price) return alert("Please fill all required fields.");
+            if(mrp && Number(mrp) <= Number(price)) return alert("MRP must be higher than the selling price, or leave it empty.");
+            const editing = !!editingId;
+            if(!editing || files.length) {
+                if(files.length < 1 || files.length > 5) return alert("Please select a minimum of 1 and a maximum of 5 images.");
+            }
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+            try {
+                let uploadedUrls = [];
+                if(files.length) {
+                    uploadedUrls = await Promise.all(Array.from(files).map(async (file) => {
+                        const formData = new FormData();
+                        formData.append('image', file);
+                        const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, { method: 'POST', body: formData });
+                        const imgData = await response.json();
+                        if(imgData.success) return imgData.data.url;
+                        throw new Error("One of the images failed to upload.");
+                    }));
+                }
+                const data = {
+                    name, category,
+                    price: Number(price),
+                    stock: Number(stock),
+                    mrp: mrp ? Number(mrp) : null,
+                    brand: $v('p-brand').value.trim(),
+                    payment_type: type,
+                    description: $v('p-desc').value.trim(),
+                    highlights: $v('p-high').value.split('\n').map(x => x.trim()).filter(Boolean),
+                    specs: $v('p-specs').value.split('\n').map(x => x.trim()).filter(Boolean).join('\n'),
+                };
+                if(uploadedUrls.length) { data.image_url = uploadedUrls[0]; data.images = uploadedUrls; }
+                if(editing) await updateDoc(doc(db, "products", editingId), data);
+                else await addDoc(collection(db, "products"), { ...data, created_at: new Date() });
+
+                resetForm();
+                loadProducts();
+                alert(editing ? "Product Updated!" : "Product Saved Successfully!");
+            } catch (error) {
+                alert("Error: " + error.message);
+            } finally {
+                btn.innerHTML = editingId ? 'Update Product' : 'Save Product';
+            }
+        });
+
+        window.deleteProd = async (id) => {
+            if(confirm('Delete product?')) {
+                await deleteDoc(doc(db, "products", id));
+                loadProducts();
+            }
+        };
+
+        loadCategories();
+        loadProducts();
+    </script>
+</body>
+</html>
