@@ -104,7 +104,7 @@
 </div>
 
 <script type="module">
-import { db, doc, updateDoc, addDoc, collection, query, where, getDocs, getDoc } from './common/firebase-config.js';
+import { db, doc, addDoc, collection, query, where, getDocs, getDoc, writeBatch } from './common/firebase-config.js';
 import { mountChrome, icon, esc, $, $$, rupee, getCart, setCart, getSettings, waLink, whenUser, loginUrl, toast, etaRange } from './common/app.js';
 import { loadAddresses, addressSheet, formatAddress } from './common/address.js';
 
@@ -243,16 +243,17 @@ async function placeOrder() {
   const reset = () => { placing = false; btns.forEach((b) => { b.disabled = false; b.textContent = 'Place order'; }); };
 
   try {
-    let codeDocId = null;
+    let mcRef = null;
     if (method === 'prepaid') {
-      const snap = await getDocs(query(collection(db, 'master_codes'), where('code', '==', code)));
-      if (snap.empty) { fail('#e-code', 'This Master Code is not valid. Check it and try again.'); $('#code').focus(); return reset(); }
-      const d = snap.docs[0];
+      // The code is the document id, so a customer can only open a code they were actually given.
+      if (!/^[A-Z0-9-]{6,40}$/.test(code)) { fail('#e-code', 'This Master Code is not valid. Check it and try again.'); $('#code').focus(); return reset(); }
+      mcRef = doc(db, 'master_codes', code);
+      const d = await getDoc(mcRef);
+      if (!d.exists()) { fail('#e-code', 'This Master Code is not valid. Check it and try again.'); $('#code').focus(); return reset(); }
       if (d.data().is_used) { fail('#e-code', 'This Master Code has already been used.'); return reset(); }
       if (d.data().amount !== total()) { fail('#e-code', `This code is for ${rupee(d.data().amount)}, but your total is ${rupee(total())}. Message us on WhatsApp to fix the amount.`); return reset(); }
-      codeDocId = d.id;
     }
-    await addDoc(collection(db, 'orders'), {
+    const order = {
       user_id: user.uid,
       customer_name: ad.name || user.displayName || '',
       subtotal,
@@ -268,14 +269,23 @@ async function placeOrder() {
       status: 'Placed',
       created_at: new Date(),
       items: cart,
-    });
-    if (codeDocId) await updateDoc(doc(db, 'master_codes', codeDocId), { is_used: true, used_by: user.uid, used_for_amount: total(), used_at: new Date() });
+    };
+    if (mcRef) {
+      // One atomic write: the order is saved and the code is burned together, or neither happens.
+      const batch = writeBatch(db);
+      batch.set(doc(collection(db, 'orders')), order);
+      batch.update(mcRef, { is_used: true, used_by: user.uid, used_for_amount: total(), used_at: new Date() });
+      await batch.commit();
+    } else {
+      await addDoc(collection(db, 'orders'), order);
+    }
     setCart([]);
     $('#success').hidden = false;
     $('#success .btn').focus();
     setTimeout(() => { location.href = 'order.html'; }, 2600);
   } catch (e) {
     reset();
+    if (method === 'prepaid' && e && e.code === 'permission-denied') { fail('#e-code', 'This Master Code could not be used. Check it, or message us on WhatsApp.'); return; }
     toast('We could not place your order. Please try again.', 'bad');
   }
 }

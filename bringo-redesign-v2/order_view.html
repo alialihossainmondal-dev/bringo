@@ -152,6 +152,7 @@ function requestSheet(kind) {
     order = { id: snap.id, ...snap.data() };
     render();
   } catch (e) {
+    if (e && e.code === 'permission-denied') { view.innerHTML = emptyState({ ic: 'search', title: 'Order not found', text: 'We could not find this order in your account.', href: 'order.html', cta: 'My orders' }); return; }
     view.innerHTML = emptyState({ ic: 'alert', title: 'Could not load this order', text: 'Check your connection and try again.', href: `order_view.html?id=${id}`, cta: 'Try again' });
   }
 })();

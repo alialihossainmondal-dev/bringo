@@ -97,7 +97,7 @@
 
     <script type="module" src="guard.js"></script>
     <script type="module">
-        import { db, collection, getDocs, addDoc } from '../common/firebase-config.js';
+        import { db, collection, getDocs, doc, setDoc } from '../common/firebase-config.js';
 
         async function fetchDashboardStats() {
             try {
@@ -160,11 +160,14 @@
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             btn.disabled = true;
 
-            const randomNum = Math.floor(10000 + Math.random() * 90000);
-            const newCode = "BB-" + randomNum;
+            // Strong random code (about 49 bits). Never use short or guessable codes: the code is the only secret.
+            const ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+            const bytes = new Uint8Array(10); crypto.getRandomValues(bytes);
+            const rnd = Array.from(bytes, b => ALPHA[b % ALPHA.length]).join('');
+            const newCode = 'BB-' + rnd.slice(0, 5) + '-' + rnd.slice(5);
 
             try {
-                await addDoc(collection(db, "master_codes"), {
+                await setDoc(doc(db, "master_codes", newCode), {
                     code: newCode,
                     amount: Number(amountInput), // NEW: টাকার পরিমাণ সেভ হচ্ছে
                     is_used: false,
