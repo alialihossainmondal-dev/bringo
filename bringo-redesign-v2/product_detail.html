@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Product | Bringo</title>
+<meta name="description" content="Product details on Bringo. Pay on delivery or prepay with UPI.">
+<meta name="theme-color" content="#14307e">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Bringo">
+<meta property="og:title" content="Product | Bringo">
+<meta property="og:description" content="Product details on Bringo. Pay on delivery or prepay with UPI.">
+<meta property="og:image" content="https://bringo-steel.vercel.app/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common/theme.css">
+<style>@media(max-width:899px){.hdr,.announce{display:none}.pd-wrap{padding-top:0;padding-bottom:0}.gallery{margin:0 -16px}.pd-info{margin:-22px -16px 0;padding:22px 16px 10px}}</style>
+</head>
+<body class="no-tabbar has-dock">
+<div class="float-nav">
+  <button class="icon-btn" id="go-back" aria-label="Go back"></button>
+  <div class="group">
+    <button class="icon-btn wish-btn" id="wish-m" aria-label="Add to wishlist" aria-pressed="false"></button>
+    <button class="icon-btn" id="share" aria-label="Share this product"></button>
+    <a class="icon-btn" href="cart.html" aria-label="Cart" id="fl-cart"><span class="badge" data-cart-count hidden>0</span></a>
+  </div>
+</div>
+
+<main id="main">
+  <div class="wrap pd-wrap">
+    <nav class="crumbs d-only" aria-label="Breadcrumb" id="crumbs"></nav>
+    <div class="pd" id="pd">
+      <div class="gallery"><div class="skel" style="aspect-ratio:1/1;border-radius:0"></div></div>
+      <div class="pd-info"><div class="skel skel-line" style="width:70%;height:28px"></div><div class="skel skel-line" style="width:30%;height:34px"></div><div class="skel skel-line" style="width:90%"></div></div>
+    </div>
+    <div id="rails"></div>
+  </div>
+</main>
+
+<div class="qty-row" id="qtyrow" hidden>
+  <span>Quantity</span>
+  <div class="stepper" role="group" aria-label="Quantity">
+    <button id="qty-minus" aria-label="Decrease quantity"></button>
+    <output id="qty-val" aria-live="polite">1</output>
+    <button id="qty-plus" aria-label="Increase quantity"></button>
+  </div>
+</div>
+
+<div class="dock dock-flow" id="buybar" hidden>
+  <div class="dock-in pd-buy">
+    <button class="btn btn-outline" id="add-btn"></button>
+    <button class="btn btn-primary" id="buy-btn">Buy now</button>
+  </div>
+</div>
+
+<script type="module">
+import { db, doc, getDoc, collection, query, where, getDocs } from './common/firebase-config.js';
+import { mountChrome, icon, esc, $, $$, rupee, waLink, getSettings, cartQty, setItemQty, toast, productCard, bindBuy, emptyState, loadAllProducts, rail, getRecent, pushRecent, isWished, toggleWish, mrpOf, offPct, specRows, lineList, etaRange, getSavedPin, savePin } from './common/app.js';
+
+mountChrome({ variant: 'inner', title: 'Product', active: '', tabbar: false });
+$('#go-back').innerHTML = icon('back');
+$('#share').innerHTML = icon('share');
+$('#wish-m').innerHTML = icon('heart');
+$('#fl-cart').insertAdjacentHTML('afterbegin', icon('cart'));
+$('#qty-minus').innerHTML = icon('minus', 'ic-sm');
+$('#qty-plus').innerHTML = icon('plus', 'ic-sm');
+$('#go-back').addEventListener('click', () => (history.length > 1 ? history.back() : (location.href = 'shop.html')));
+
+const id = new URLSearchParams(location.search).get('id');
+let product = null, qty = 1, added = false, settings = null;
+const stockOf = () => { const n = Number(product.stock); return product.stock == null || Number.isNaN(n) ? Infinity : Math.max(0, n); };
+
+function paymentTag(t) {
+  if (t === 'Prepaid') return '<span class="tag tag-warn">Prepaid only (UPI)</span>';
+  if (t === 'COD') return '<span class="tag tag-ok">Cash on delivery only</span>';
+  return '<span class="tag tag-ok">Cash on delivery or prepaid</span>';
+}
+
+function syncWish() {
+  const on = isWished(id);
+  $$('[data-pdwish]').forEach((b) => { b.setAttribute('aria-pressed', String(on)); b.setAttribute('aria-label', on ? 'Remove from wishlist' : 'Add to wishlist'); });
+  const m = $('#wish-m'); m.setAttribute('aria-pressed', String(on)); m.setAttribute('aria-label', on ? 'Remove from wishlist' : 'Add to wishlist');
+}
+function doWish() { if (!product) return; toast(toggleWish(id) ? 'Saved to your wishlist' : 'Removed from your wishlist'); syncWish(); }
+$('#wish-m').addEventListener('click', doWish);
+window.addEventListener('bringo:wish', syncWish);
+
+/* ---------- full screen photo viewer ---------- */
+function openViewer(images, start, alt) {
+  const lb = document.createElement('div');
+  lb.className = 'lightbox';
+  lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-modal', 'true'); lb.setAttribute('aria-label', 'Product photos');
+  lb.innerHTML = `<div class="lb-top"><span id="lb-n">${start + 1} / ${images.length}</span><button class="icon-btn" aria-label="Close photos">${icon('x')}</button></div><div class="lb-track">${images.map((u) => `<div class="lb-slide"><img src="${esc(u)}" alt="${esc(alt)}"></div>`).join('')}</div><div class="lb-hint">Tap a photo to zoom in or out</div>`;
+  document.body.appendChild(lb); document.body.style.overflow = 'hidden';
+  const track = $('.lb-track', lb);
+  track.scrollLeft = start * track.clientWidth;
+  track.addEventListener('scroll', () => { $('#lb-n', lb).textContent = `${Math.round(track.scrollLeft / track.clientWidth) + 1} / ${images.length}`; }, { passive: true });
+  $$('.lb-slide', lb).forEach((sl) => sl.addEventListener('click', () => sl.classList.toggle('zoomed')));
+  const close = () => { lb.remove(); document.body.style.overflow = ''; document.removeEventListener('keydown', key); };
+  const key = (e) => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', key);
+  $('.lb-top .icon-btn', lb).addEventListener('click', close);
+  $('.lb-top .icon-btn', lb).focus();
+}
+
+async function loadOffers() {
+  try {
+    const snap = await getDocs(query(collection(db, 'coupons'), where('show_public', '==', true)));
+    const rows = [];
+    snap.forEach((d) => { const c = d.data(); if (c.code) rows.push(c); });
+    if (!rows.length) return;
+    const host = $('#offers');
+    host.innerHTML = `<h2>${icon('percent')}Available offers</h2><ul class="offers">${rows.slice(0, 4).map((c) => `<li>${icon('tag', 'ic-sm')}<span>Use <code>${esc(c.code)}</code> at checkout for ${rupee(c.discount_amount)} off${Number(c.min_order_value) ? ` on orders of ${rupee(c.min_order_value)} or more` : ''}.</span></li>`).join('')}</ul>`;
+    host.hidden = false;
+  } catch (e) { /* offers are optional */ }
+}
+
+function pinBox() {
+  const box = $('#pinbox');
+  const saved = getSavedPin();
+  box.innerHTML = `<h2>${icon('truck')}Delivery</h2>
+    <form class="pin-form" id="pin-form" novalidate><input id="pin" inputmode="numeric" maxlength="6" placeholder="Enter PIN code" autocomplete="postal-code" aria-label="Delivery PIN code" value="${esc(saved)}"><button class="btn btn-dark btn-sm" type="submit">Check</button></form>
+    <div class="pin-res" id="pin-res" aria-live="polite"></div>`;
+  const show = (pin) => {
+    const res = $('#pin-res');
+    if (!/^[1-9]\d{5}$/.test(pin)) { res.innerHTML = `<span class="field-err">${icon('alert', 'ic-sm')}Enter a valid 6-digit PIN code.</span>`; return false; }
+    savePin(pin);
+    const pay = product.payment_type === 'Prepaid' ? 'Prepaid (UPI) only.' : product.payment_type === 'COD' ? 'Cash on delivery only.' : 'Cash on delivery or prepaid.';
+    res.innerHTML = `Delivering to <b style="color:inherit">${esc(pin)}</b>: expected <b>${esc(etaRange(settings))}</b>. ${pay} <span class="muted">This is an estimate. We confirm on WhatsApp if your area needs more time.</span>`;
+    return true;
+  };
+  $('#pin-form').addEventListener('submit', (e) => { e.preventDefault(); show($('#pin').value.trim()); });
+  if (/^[1-9]\d{5}$/.test(saved)) show(saved);
+  else $('#pin-res').innerHTML = `<span class="muted">Delivery usually takes ${esc(settings.delivery_time)} after dispatch. Enter your PIN code for an estimated date.</span>`;
+}
+
+async function show() {
+  if (!id) return notFound();
+  let snap;
+  try { snap = await getDoc(doc(db, 'products', id)); } catch (e) { return notFound(true); }
+  if (!snap.exists()) return notFound();
+  product = { ...snap.data(), id: snap.id };
+  pushRecent(product.id);
+  const s = settings = await getSettings();
+  const images = (product.images && product.images.length ? product.images : [product.image_url]).filter(Boolean);
+  const out = stockOf() === 0;
+  const low = !out && stockOf() <= 5;
+  const off = offPct(product), mrp = mrpOf(product);
+  const highlights = lineList(product.highlights);
+  const specs = specRows(product.specs);
+
+  document.title = `${product.name} | Bringo`;
+  const setMeta = (sel, v) => { const m = document.querySelector(sel); if (m) m.setAttribute('content', v); };
+  const desc = String(product.description || '').replace(/\s+/g, ' ').slice(0, 155) || `Buy ${product.name} on Bringo.`;
+  setMeta('meta[name="description"]', desc); setMeta('meta[property="og:title"]', document.title); setMeta('meta[property="og:description"]', desc);
+  if (images[0]) setMeta('meta[property="og:image"]', images[0]);
+  const ld = document.createElement('script');
+  ld.type = 'application/ld+json';
+  ld.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'Product', name: product.name, image: images, description: desc, category: product.category || undefined, brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined, offers: { '@type': 'Offer', priceCurrency: 'INR', price: Number(product.price), availability: out ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock', url: location.href } });
+  document.head.appendChild(ld);
+
+  $('#crumbs').innerHTML = `<a href="index.html">Home</a>${icon('chevron')}<a href="shop.html">Shop</a>${product.category ? `${icon('chevron')}<a href="shop.html?cat=${encodeURIComponent(product.category)}">${esc(product.category)}</a>` : ''}${icon('chevron')}<span aria-current="page">${esc(product.name)}</span>`;
+
+  $('#pd').innerHTML = `
+    <div class="gallery">
+      <div class="gallery-track" id="track" tabindex="0" aria-label="Product photos">${images.map((u, i) => `<img src="${esc(u)}" alt="${esc(product.name)}${images.length > 1 ? ' photo ' + (i + 1) : ''}" ${i ? 'loading="lazy"' : ''} width="600" height="600" data-zoom="${i}">`).join('')}</div>
+      ${images.length > 1 ? `<span class="gallery-count" id="gcount">1 / ${images.length}</span><div class="gallery-thumbs" id="thumbs">${images.map((u, i) => `<button aria-label="Show photo ${i + 1}"${i === 0 ? ' aria-current="true"' : ''}><img src="${esc(u)}" alt="" loading="lazy"></button>`).join('')}</div>` : ''}
+    </div>
+    <div class="pd-info">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <span class="muted" style="font-size:14px;font-weight:600">${product.brand ? esc(product.brand) : product.category ? `<a href="shop.html?cat=${encodeURIComponent(product.category)}">${esc(product.category)}</a>` : ''}</span>
+        <button class="icon-btn d-only" data-pdwish aria-pressed="false" aria-label="Add to wishlist" style="color:#e11d48">${icon('heart')}</button>
+      </div>
+      <h1>${esc(product.name)}</h1>
+      <div class="pd-price">${rupee(product.price)}${mrp ? `<s>${rupee(mrp)}</s><span class="off">${off}% off</span>` : ''}</div>
+      ${mrp ? `<div class="pd-save">You save ${rupee(mrp - Number(product.price))} on this item</div>` : ''}
+      <div class="pd-tags">
+        ${out ? '<span class="tag tag-bad">Out of stock</span>' : low ? `<span class="tag tag-warn">Only ${stockOf()} left</span>` : '<span class="tag tag-ok">In stock</span>'}
+        ${paymentTag(product.payment_type)}
+      </div>
+      ${highlights.length ? `<ul class="pd-high">${highlights.slice(0, 8).map((h) => `<li>${icon('check')}<span>${esc(h)}</span></li>`).join('')}</ul>` : ''}
+      <div class="pd-box" id="offers" hidden></div>
+      <div class="pd-box" id="pinbox"></div>
+      <ul class="pd-points">
+        <li>${icon('undo')}<span>Returns accepted within ${esc(s.return_days)} days for eligible items. <a class="link" href="returns.html">Returns policy</a></span></li>
+        <li>${icon('whatsapp')}<span>Questions about this product? <a class="link" target="_blank" rel="noopener" href="${esc(waLink(s.whatsapp, `Hi Bringo, I have a question about ${product.name} (${location.href})`))}">Ask on WhatsApp</a></span></li>
+      </ul>
+      ${product.description ? `<div class="pd-desc"><h2>About this item</h2><p>${esc(product.description)}</p></div>` : ''}
+      ${specs.length ? `<div class="pd-box" id="specs"><h2>${icon('file')}Specifications</h2><table class="specs"><tbody>${specs.map(([k, v]) => `<tr><th scope="row">${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</tbody></table></div>` : ''}
+    </div>`;
+
+  syncWish();
+  $$('[data-pdwish]').forEach((b) => b.addEventListener('click', doWish));
+  pinBox();
+  loadOffers();
+  $$('[data-zoom]').forEach((img) => img.addEventListener('click', () => openViewer(images, Number(img.dataset.zoom), product.name)));
+
+  if (images.length > 1) {
+    const track = $('#track'), thumbs = $$('#thumbs button');
+    const at = () => Math.round(track.scrollLeft / track.clientWidth);
+    track.addEventListener('scroll', () => { const n = at(); $('#gcount').textContent = `${n + 1} / ${images.length}`; thumbs.forEach((t, k) => (k === n ? t.setAttribute('aria-current', 'true') : t.removeAttribute('aria-current'))); }, { passive: true });
+    thumbs.forEach((t, k) => t.addEventListener('click', () => track.scrollTo({ left: k * track.clientWidth, behavior: 'smooth' })));
+  }
+
+  const addBtn = $('#add-btn'), buyBtn = $('#buy-btn');
+  addBtn.innerHTML = `${icon('cart')} Add to cart`;
+  const qrow = $('#qtyrow');
+  $('.pd-points').insertAdjacentElement('afterend', qrow);
+  qrow.hidden = false;
+  if (out) {
+    addBtn.disabled = buyBtn.disabled = true; qrow.style.opacity = '.4';
+    buyBtn.outerHTML = `<a class="btn btn-wa" id="notify" target="_blank" rel="noopener" href="${esc(waLink(s.whatsapp, `Hi Bringo, please tell me when "${product.name}" is back in stock (${location.href})`))}">${icon('whatsapp')} Notify me</a>`;
+  }
+  $('#buybar').hidden = false;
+  const bar = $('#buybar'), mq = matchMedia('(min-width: 900px)');
+  const place = () => (mq.matches ? $('#qtyrow').insertAdjacentElement('afterend', bar) : document.body.appendChild(bar));
+  mq.addEventListener('change', place); place();
+  loadRails();
+}
+
+function notFound(failed) {
+  $('#pd').innerHTML = `<div style="grid-column:1/-1">${emptyState({ ic: 'search', title: failed ? 'Could not load this product' : 'This product is not available', text: failed ? 'Check your connection and try again.' : 'It may have been removed or sold out.', href: 'shop.html', cta: 'Back to the shop' })}</div>`;
+}
+
+async function loadRails() {
+  try {
+    const all = await loadAllProducts(getDocs, collection);
+    const byId = new Map(all.map((p) => [p.id, p]));
+    const similar = all.filter((p) => p.id !== product.id && product.category && p.category === product.category).slice(0, 10);
+    const seen = new Set(similar.map((p) => p.id));
+    const recent = getRecent().filter((x) => x !== product.id).map((x) => byId.get(x)).filter((p) => p && !seen.has(p.id)).slice(0, 10);
+    const host = $('#rails');
+    host.innerHTML = rail('Similar products', similar, { href: product.category ? `shop.html?cat=${encodeURIComponent(product.category)}` : 'shop.html', more: 'See all' }) + rail('Recently viewed', recent);
+    bindBuy(host, (k) => byId.get(k));
+  } catch (e) { /* optional */ }
+}
+
+const val = $('#qty-val');
+$('#qty-plus').addEventListener('click', () => { if (!product) return; if (qty >= stockOf()) return toast(`Only ${stockOf()} in stock`, 'bad'); val.textContent = ++qty; added = false; });
+$('#qty-minus').addEventListener('click', () => { if (qty > 1) { val.textContent = --qty; added = false; } });
+
+function addSelected() {
+  const have = cartQty(product.id);
+  if (have + qty > stockOf()) { toast(have ? `You already have ${have} in your cart. Only ${stockOf()} in stock.` : `Only ${stockOf()} in stock`, 'bad'); return false; }
+  setItemQty(product, have + qty);
+  added = true;
+  return true;
+}
+$('#add-btn').addEventListener('click', (e) => {
+  if (!product || !addSelected()) return;
+  const b = e.currentTarget, html = b.innerHTML;
+  b.innerHTML = `${icon('check')} Added`;
+  setTimeout(() => { b.innerHTML = html; }, 1400);
+});
+document.addEventListener('click', (e) => { if (e.target.closest('#buy-btn')) { if (!product) return; if (added || addSelected()) location.href = 'checkout.html'; } });
+$('#share').addEventListener('click', async () => {
+  if (!product) return;
+  const data = { title: product.name, text: `${product.name} on Bringo`, url: location.href };
+  try {
+    if (navigator.share) await navigator.share(data);
+    else { await navigator.clipboard.writeText(location.href); toast('Link copied'); }
+  } catch (e) { /* share cancelled */ }
+});
+
+show();
+</script>
+</body>
+</html>

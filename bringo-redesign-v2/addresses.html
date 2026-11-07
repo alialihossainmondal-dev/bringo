@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saved addresses | Bringo</title>
+<meta name="description" content="Manage your Bringo delivery addresses.">
+<meta name="theme-color" content="#14307e">
+<meta name="robots" content="noindex">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Bringo">
+<meta property="og:title" content="Saved addresses | Bringo">
+<meta property="og:description" content="Manage your Bringo delivery addresses.">
+<meta property="og:image" content="https://bringo-steel.vercel.app/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common/theme.css">
+</head>
+<body>
+<main id="main">
+  <div class="wrap wrap-narrow">
+    <div class="page-head always"><h1>Saved addresses</h1></div>
+    <div class="stack" id="list" style="margin-top:16px" aria-live="polite">
+      <div class="addr"><div class="skel skel-line" style="width:35%;height:18px;margin:0"></div><div class="skel skel-line" style="width:90%"></div><div class="skel skel-line" style="width:60%"></div></div>
+    </div>
+    <button class="btn btn-primary btn-block" id="add" style="margin-top:16px" hidden><span data-i="plus"></span> Add a new address</button>
+  </div>
+</main>
+
+<script type="module">
+import { mountChrome, icon, esc, $, $$, whenUser, loginUrl, emptyState, toast, confirmDialog } from './common/app.js';
+import { loadAddresses, saveAddresses, addressSheet, formatAddress } from './common/address.js';
+
+mountChrome({ variant: 'inner', title: 'Saved addresses', back: 'profile.html', active: 'account' });
+$$('[data-i]').forEach((el) => { el.innerHTML = icon(el.dataset.i); });
+let user = null, list = [];
+
+function draw() {
+  const host = $('#list');
+  $('#add').hidden = false;
+  if (!list.length) { host.innerHTML = emptyState({ ic: 'pin', title: 'No saved addresses', text: 'Add an address once and pick it in a tap at checkout.' }); return; }
+  host.innerHTML = list.map((a) => `<article class="addr" data-id="${esc(a.id)}">
+    <div class="addr-top"><b>${esc(a.name || 'Delivery address')}</b><span class="tag tag-ink">${esc(a.label || 'Home')}</span>${a.default ? '<span class="tag tag-ok">Default</span>' : ''}</div>
+    <p>${esc(formatAddress(a))}</p><p class="muted" style="margin-top:2px">Mobile: ${esc(a.phone)}</p>
+    <div class="addr-act"><button class="btn btn-outline" data-edit>${icon('edit', 'ic-sm')} Edit</button>${a.default ? '' : '<button class="btn btn-outline" data-def>Make default</button>'}<button class="btn btn-outline" data-del>${icon('trash', 'ic-sm')} Delete</button></div>
+  </article>`).join('');
+}
+async function refresh() { list = await loadAddresses(user); draw(); }
+
+$('#list').addEventListener('click', async (e) => {
+  const card = e.target.closest('.addr'); if (!card) return;
+  const a = list.find((x) => x.id === card.dataset.id); if (!a) return;
+  if (e.target.closest('[data-edit]')) { if (await addressSheet({ user, existing: a })) refresh(); }
+  else if (e.target.closest('[data-def]')) {
+    const next = list.filter((x) => !x.legacy).map((x) => ({ ...x, default: x.id === a.id }));
+    try { await saveAddresses(user, next); toast('Default address updated'); refresh(); } catch (err) { toast('Could not update. Try again.', 'bad'); }
+  } else if (e.target.closest('[data-del]')) {
+    if (!(await confirmDialog({ title: 'Delete this address?', text: formatAddress(a), ok: 'Delete', danger: true }))) return;
+    let next = list.filter((x) => !x.legacy && x.id !== a.id);
+    if (next.length && !next.some((x) => x.default)) next[0] = { ...next[0], default: true };
+    try { await saveAddresses(user, next); toast('Address deleted'); refresh(); } catch (err) { toast('Could not delete. Try again.', 'bad'); }
+  }
+});
+$('#add').addEventListener('click', async () => { if (await addressSheet({ user })) refresh(); });
+
+whenUser().then((u) => {
+  if (!u) return location.replace(loginUrl('addresses.html'));
+  user = u; refresh();
+});
+</script>
+</body>
+</html>

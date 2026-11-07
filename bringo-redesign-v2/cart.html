@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your cart | Bringo</title>
+<meta name="description" content="Review the items in your Bringo cart and go to checkout.">
+<meta name="theme-color" content="#14307e">
+<meta name="robots" content="noindex">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Bringo">
+<meta property="og:title" content="Your cart | Bringo">
+<meta property="og:description" content="Review the items in your Bringo cart and go to checkout.">
+<meta property="og:image" content="https://bringo-steel.vercel.app/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common/theme.css">
+</head>
+<body class="no-tabbar has-dock">
+<main id="main">
+  <div class="wrap">
+    <div class="page-head"><h1>Your cart</h1></div>
+    <div class="layout-2" style="margin-top:16px">
+      <div>
+        <div id="notice" hidden></div>
+        <div class="cart-list" id="list"></div>
+      </div>
+      <aside class="sticky" id="summary-col" hidden>
+        <div class="card">
+          <h2 class="card-title">Order summary</h2>
+          <div class="sum-row"><span id="sum-count">Items</span><span id="sum-sub">0</span></div>
+          <p class="muted" style="font-size:13.5px;margin-top:8px">Coupons and delivery details are added at checkout.</p>
+          <div class="sum-total"><span>Total</span><span id="sum-total">0</span></div>
+          <div class="d-only" style="margin-top:16px"><button class="btn btn-primary btn-block js-checkout">Go to checkout</button></div>
+          <ul class="pd-points" style="margin:16px 0 0">
+            <li><span class="ps"></span><span>Pay on delivery on eligible items, or prepay with UPI.</span></li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<div class="dock dock-m" id="dock" hidden>
+  <div class="dock-in">
+    <div class="dock-total"><small>Total</small><b id="dock-total">0</b></div>
+    <button class="btn btn-primary js-checkout">Go to checkout</button>
+  </div>
+</div>
+
+<script type="module">
+import { mountChrome, icon, esc, $, $$, rupee, getCart, setCart, emptyState, whenUser, loginUrl } from './common/app.js';
+
+mountChrome({ variant: 'inner', title: 'Your cart', back: 'index.html', active: 'cart', tabbar: false, footer: false });
+
+$('.ps').innerHTML = icon('shield');
+const list = $('#list');
+function render() {
+  const items = getCart();
+  const empty = items.length === 0;
+  $('#summary-col').hidden = empty;
+  $('#dock').hidden = empty;
+  if (empty) {
+    $('#notice').hidden = true;
+    list.innerHTML = emptyState({ ic: 'cart', title: 'Your cart is empty', text: 'Add something you need and it will show up here.', href: 'index.html', cta: 'Browse products' });
+    return;
+  }
+  const total = items.reduce((n, i) => n + Number(i.price) * Number(i.qty), 0);
+  const units = items.reduce((n, i) => n + Number(i.qty), 0);
+  $('#sum-count').textContent = `Subtotal (${units} item${units === 1 ? '' : 's'})`;
+  $('#sum-sub').textContent = $('#sum-total').textContent = $('#dock-total').textContent = rupee(total);
+  const prepaid = items.some((i) => i.type === 'Prepaid');
+  const n = $('#notice');
+  n.hidden = !prepaid;
+  n.className = 'notice notice-info';
+  n.style.marginBottom = '12px';
+  n.innerHTML = prepaid ? `${icon('info')}<span>Some items are prepaid only. You will pay by UPI at checkout.</span>` : '';
+  list.innerHTML = items.map((i) => `
+    <div class="cart-item" data-id="${esc(i.id)}">
+      <a href="product_detail.html?id=${encodeURIComponent(i.id)}"><img src="${esc(i.image)}" alt="" width="76" height="76"></a>
+      <div style="min-width:0">
+        <a href="product_detail.html?id=${encodeURIComponent(i.id)}"><h3>${esc(i.name)}</h3></a>
+        <div class="price">${rupee(i.price)}</div>
+        <div class="stepper stepper-sm stepper-light" role="group" aria-label="Quantity for ${esc(i.name)}">
+          <button data-act="dec" aria-label="Remove one">${icon('minus', 'ic-sm')}</button><output>${Number(i.qty)}</output><button data-act="inc" aria-label="Add one more">${icon('plus', 'ic-sm')}</button>
+        </div>
+      </div>
+      <button class="cart-remove" data-act="rm" aria-label="Remove ${esc(i.name)} from cart">${icon('trash')}</button>
+    </div>`).join('');
+}
+list.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const id = b.closest('[data-id]').dataset.id;
+  let items = getCart();
+  const it = items.find((x) => x.id === id);
+  if (!it) return;
+  if (b.dataset.act === 'rm') items = items.filter((x) => x.id !== id);
+  else it.qty += b.dataset.act === 'inc' ? 1 : -1;
+  setCart(items.filter((x) => x.qty > 0));
+  render();
+});
+$$('.js-checkout').forEach((b) => b.addEventListener('click', async () => {
+  b.disabled = true;
+  const user = await whenUser();
+  location.href = user ? 'checkout.html' : loginUrl('checkout.html');
+}));
+window.addEventListener('pageshow', () => { $$('.js-checkout').forEach((b) => (b.disabled = false)); render(); });
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="robots" content="noindex, nofollow">
+    <script>document.documentElement.style.visibility='hidden'</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Admin - Order Details</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 select-none pb-24">
+    <div class="bg-orange-600 text-white p-4 sticky top-0 flex items-center shadow-md z-40">
+        <a href="order.html" class="mr-4"><i class="fa-solid fa-arrow-left text-xl"></i></a>
+        <h1 class="text-xl font-bold">Order #<span id="header-id">---</span></h1>
+    </div>
+
+    <div class="p-4 space-y-4">
+        <!-- Status Update -->
+        <div class="bg-white p-4 rounded-xl shadow-sm">
+            <h2 class="font-bold text-gray-800 mb-2 text-sm uppercase">Update Status</h2>
+            <div class="flex gap-2">
+                <select id="status-select" class="flex-1 border rounded-lg p-2 text-sm focus:outline-none focus:border-orange-500 bg-gray-50 font-bold">
+                    <option value="Placed">Placed / Pending Verification</option>
+                    <option value="Confirmed">Payment Confirmed</option>
+                    <option value="Dispatched">Dispatched</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Cancelled">Cancelled</option>
+                    <option value="Return accepted">Return accepted</option>
+                    <option value="Replacement accepted">Replacement accepted</option>
+                </select>
+                <button id="update-btn" class="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow hover:bg-orange-600">Update</button>
+            </div>
+        </div>
+
+        <!-- Customer requests -->
+        <div id="req-card" class="bg-white p-4 rounded-xl shadow-sm border-2 border-red-300 hidden">
+            <h2 class="font-bold text-red-700 mb-2 text-sm uppercase"><i class="fa-solid fa-bell mr-1"></i> Customer request</h2>
+            <p id="req-text" class="text-sm text-gray-700"></p>
+            <div class="flex gap-2 mt-3">
+                <button id="req-approve" class="flex-1 bg-gray-900 text-white py-2 rounded-lg text-sm font-bold">Approve (set status)</button>
+                <button id="req-clear" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg text-sm font-bold">Dismiss</button>
+            </div>
+        </div>
+
+        <!-- Customer + items -->
+        <div class="bg-white p-4 rounded-xl shadow-sm">
+            <h2 class="font-bold text-gray-800 mb-3 text-sm uppercase"><i class="fa-solid fa-user text-orange-500 mr-1"></i> Customer &amp; Delivery</h2>
+            <div class="text-sm space-y-1">
+                <p><span class="text-gray-500">Name:</span> <b id="c-name">---</b></p>
+                <p><span class="text-gray-500">Phone:</span> <b id="c-phone">---</b> <a id="c-wa" target="_blank" class="text-green-600 font-bold ml-2"><i class="fa-brands fa-whatsapp"></i> Chat</a></p>
+                <p><span class="text-gray-500">Address:</span> <span id="c-addr" class="font-semibold text-gray-800">---</span></p>
+                <p><span class="text-gray-500">Notes:</span> <span id="c-notes" class="text-gray-700">---</span></p>
+            </div>
+            <div id="items" class="mt-3 border-t pt-3 space-y-2 text-sm"></div>
+        </div>
+
+        <!-- Payment Info (Crucial for Prepaid) -->
+        <div id="payment-card" class="bg-white p-4 rounded-xl shadow-sm border-2 border-transparent">
+            <h2 class="font-bold text-gray-800 mb-3 text-sm uppercase"><i class="fa-solid fa-wallet text-orange-500 mr-1"></i> Payment Details</h2>
+            <div class="grid grid-cols-2 gap-2 text-sm">
+                <div class="text-gray-500">Method:</div>
+                <div id="pay-method" class="font-bold text-gray-800 uppercase text-right">---</div>
+                
+                <div class="text-gray-500">Total Amount:</div>
+                <div id="pay-amount" class="font-bold text-orange-600 text-right">---</div>
+                
+                <div class="text-gray-500">Transaction ID:</div>
+                <div id="pay-tx" class="font-bold text-gray-800 text-right break-all">---</div>
+            </div>
+            
+            <div id="verify-warning" class="mt-3 bg-yellow-100 text-yellow-800 p-2 rounded-lg text-xs font-bold hidden flex items-start gap-2">
+                <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+                <p>Prepaid Order. Please verify the Transaction ID in your Bank App before changing status to Confirmed.</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="guard.js"></script>
+    <script type="module">
+        import { db, doc, getDoc, updateDoc } from '../common/firebase-config.js';
+
+        // Get ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('id');
+        let orderRef = null, orderData = null;
+
+        if(!orderId) {
+            alert('Invalid Order ID');
+            window.location.href = 'order.html';
+        } else {
+            document.getElementById('header-id').innerText = orderId.slice(-6).toUpperCase();
+            orderRef = doc(db, 'orders', orderId);
+            loadDetails();
+        }
+
+        async function loadDetails() {
+            const snap = await getDoc(orderRef);
+            if(snap.exists()) {
+                const data = snap.data();
+                orderData = data;
+                const $ = (i) => document.getElementById(i);
+                const esc = (t) => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+                $('c-name').innerText = data.customer_name || '---';
+                $('c-phone').innerText = data.phone_number || '---';
+                $('c-wa').href = 'https://wa.me/91' + String(data.phone_number || '').replace(/\D/g, '').slice(-10);
+                $('c-addr').innerText = data.delivery_address || '---';
+                $('c-notes').innerText = data.customer_notes || '---';
+                $('items').innerHTML = (data.items || []).map(i => `<div class="flex justify-between gap-3"><span>${esc(i.name)} <span class="text-gray-400">x ${Number(i.qty)}</span></span><b>₹${Number(i.price) * Number(i.qty)}</b></div>`).join('') +
+                    (data.discount_amount ? `<div class="flex justify-between text-green-600"><span>Coupon ${esc(data.promo_code_used)}</span><b>-₹${data.discount_amount}</b></div>` : '');
+                const cr = data.cancel_request, rr = data.return_request;
+                if (cr || rr) {
+                    const r = cr || rr;
+                    $('req-text').innerHTML = cr ? `<b>Cancellation requested.</b> Reason: ${esc(cr.reason)}` : `<b>${esc(rr.type)} requested.</b> Reason: ${esc(rr.reason)}${rr.note ? '<br>Note: ' + esc(rr.note) : ''}`;
+                    $('req-card').classList.remove('hidden');
+                    $('req-approve').innerText = cr ? 'Approve: mark Cancelled' : 'Approve: mark ' + (rr.type === 'Replace' ? 'Replacement' : 'Return') + ' accepted';
+                }
+
+                document.getElementById('status-select').value = data.status;
+                document.getElementById('pay-method').innerText = data.payment_method;
+                document.getElementById('pay-amount').innerText = `₹${data.total_amount}`;
+                document.getElementById('pay-tx').innerText = data.transaction_id || 'N/A';
+
+                if(data.payment_method === 'prepaid' && data.status === 'Placed') {
+                    document.getElementById('payment-card').classList.replace('border-transparent', 'border-orange-400');
+                    document.getElementById('verify-warning').classList.remove('hidden');
+                }
+            }
+        }
+
+        document.getElementById('update-btn').addEventListener('click', async () => {
+            const newStatus = document.getElementById('status-select').value;
+            const btn = document.getElementById('update-btn');
+            
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            try {
+                const upd = { status: newStatus };
+                if (newStatus === 'Delivered' && !(orderData && orderData.delivered_at)) upd.delivered_at = new Date();
+                await updateDoc(orderRef, upd);
+                alert('Status Updated!');
+                document.getElementById('payment-card').classList.replace('border-orange-400', 'border-transparent');
+                document.getElementById('verify-warning').classList.add('hidden');
+            } catch(e) {
+                alert('Error updating status');
+            }
+            btn.innerHTML = 'Update';
+        });
+
+        document.getElementById('req-approve').addEventListener('click', async () => {
+            if (!orderData) return;
+            const cr = orderData.cancel_request, rr = orderData.return_request;
+            const status = cr ? 'Cancelled' : (rr.type === 'Replace' ? 'Replacement accepted' : 'Return accepted');
+            await updateDoc(orderRef, { status, [cr ? 'cancel_request' : 'return_request']: { ...(cr || rr), approved: true } });
+            alert('Done. The customer sees the new status.'); location.reload();
+        });
+        document.getElementById('req-clear').addEventListener('click', async () => {
+            if (!orderData || !confirm('Dismiss this request?')) return;
+            const cr = orderData.cancel_request;
+            await updateDoc(orderRef, { [cr ? 'cancel_request' : 'return_request']: { ...(cr || orderData.return_request), dismissed: true } });
+            location.reload();
+        });
+    </script>
+</body>
+</html>
